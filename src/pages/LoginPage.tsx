@@ -70,14 +70,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({ data, onLoginSuccess, onNa
     e.preventDefault();
     setErrorMsg('');
 
-    if (adminUsername.trim() === 'admin' && adminPassword.trim() === 'admin123') {
+    const expectedUser = data.adminSecurity?.username || 'admin';
+    const expectedPass = data.adminSecurity?.password || 'vaiibondhu113';
+
+    if (adminUsername.trim() === expectedUser && adminPassword.trim() === expectedPass) {
       onLoginSuccess({
         role: 'admin',
         name: 'সুপার অ্যাডমিন (ম্যানেজার)'
       });
       onNavigate('admin');
     } else {
-      setErrorMsg('ভুল অ্যাডমিন ইউজারনেম বা পাসওয়ার্ড! (ইউজার: admin, পাসওয়ার্ড: admin123)');
+      setErrorMsg('ভুল অ্যাডমিন ইউজারনেম বা পাসওয়ার্ড! সঠিক তথ্য দিয়ে পুনরায় চেষ্টা করুন।');
     }
   };
 

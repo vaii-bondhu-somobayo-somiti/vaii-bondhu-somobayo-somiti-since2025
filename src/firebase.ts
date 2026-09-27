@@ -111,7 +111,8 @@ export function subscribeToSocietyCloudData(
             rules: Array.isArray(rawCloud.rules) && rawCloud.rules.length > 0 ? rawCloud.rules : INITIAL_SOCIETY_DATA.rules,
             committee: Array.isArray(rawCloud.committee) && rawCloud.committee.length > 0 ? rawCloud.committee : INITIAL_SOCIETY_DATA.committee,
             notices: Array.isArray(rawCloud.notices) ? rawCloud.notices : INITIAL_SOCIETY_DATA.notices,
-            paymentSubmissions: Array.isArray(rawCloud.paymentSubmissions) ? rawCloud.paymentSubmissions : INITIAL_SOCIETY_DATA.paymentSubmissions
+            paymentSubmissions: Array.isArray(rawCloud.paymentSubmissions) ? rawCloud.paymentSubmissions : INITIAL_SOCIETY_DATA.paymentSubmissions,
+            adminSecurity: rawCloud.adminSecurity || INITIAL_SOCIETY_DATA.adminSecurity
           };
           onDataLoaded(sanitized);
         } else {

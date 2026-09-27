@@ -603,5 +603,9 @@ export const INITIAL_SOCIETY_DATA: SocietyData = {
   ],
   rules: SOCIETY_RULES,
   committee: COMMITTEE_MEMBERS,
-  months2026: ['01', '02', '03']
+  months2026: ['01', '02', '03'],
+  adminSecurity: {
+    username: 'admin',
+    password: 'vaiibondhu113'
+  }
 };

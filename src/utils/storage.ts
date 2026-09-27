@@ -86,7 +86,8 @@ export function getStoredData(): SocietyData {
         : ['01', '02', '03'],
       expenses: Array.isArray(parsed.expenses) ? parsed.expenses : INITIAL_SOCIETY_DATA.expenses,
       paymentSubmissions: Array.isArray(parsed.paymentSubmissions) ? parsed.paymentSubmissions : [],
-      notices: Array.isArray(parsed.notices) ? parsed.notices : INITIAL_SOCIETY_DATA.notices
+      notices: Array.isArray(parsed.notices) ? parsed.notices : INITIAL_SOCIETY_DATA.notices,
+      adminSecurity: parsed.adminSecurity || INITIAL_SOCIETY_DATA.adminSecurity
     };
     return merged;
   } catch (err) {

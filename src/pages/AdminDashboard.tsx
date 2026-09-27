@@ -42,7 +42,9 @@ import {
   Camera,
   User,
   Image as ImageIcon,
-  Cloud
+  Cloud,
+  Lock,
+  KeyRound
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -67,6 +69,50 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const showNotification = (type: 'success' | 'error', text: string) => {
     setNotification({ type, text });
     setTimeout(() => setNotification(null), 4000);
+  };
+
+  // Admin Security Password State
+  const [securityForm, setSecurityForm] = useState({
+    username: data.adminSecurity?.username || 'admin',
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [showSecurityModal, setShowSecurityModal] = useState(false);
+
+  const handleSaveSecurity = (e: React.FormEvent) => {
+    e.preventDefault();
+    const currentPass = data.adminSecurity?.password || 'vaiibondhu113';
+    if (securityForm.currentPassword !== currentPass) {
+      showNotification('error', 'বর্তমান পাসওয়ার্ডটি সঠিক নয়!');
+      return;
+    }
+    if (securityForm.newPassword.length < 4) {
+      showNotification('error', 'নতুন পাসওয়ার্ড কমপক্ষে ৪ অক্ষরের হতে হবে!');
+      return;
+    }
+    if (securityForm.newPassword !== securityForm.confirmPassword) {
+      showNotification('error', 'নতুন পাসওয়ার্ড ও কনফার্ম পাসওয়ার্ড মেলেনি!');
+      return;
+    }
+
+    const updated: SocietyData = {
+      ...data,
+      adminSecurity: {
+        username: securityForm.username.trim() || 'admin',
+        password: securityForm.newPassword.trim()
+      }
+    };
+    saveStoredData(updated);
+    onDataUpdated(updated);
+    showNotification('success', 'অ্যাডমিন ইউজারনেম ও পাসওয়ার্ড সফলভাবে পরিবর্তিত এবং ফায়ারবেস ক্লাউডে সংরক্ষিত হয়েছে!');
+    setShowSecurityModal(false);
+    setSecurityForm({
+      username: updated.adminSecurity?.username || 'admin',
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    });
   };
 
   // -------------------------------------------------------------
@@ -603,6 +649,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             className="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-stone-950 rounded-xl text-xs font-black transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
           >
             <Download className="w-4 h-4" /> JSON ব্যাকআপ
+          </button>
+
+          <button
+            onClick={() => setShowSecurityModal(true)}
+            className="px-4 py-2.5 bg-emerald-800 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold border border-emerald-600 transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
+          >
+            <Lock className="w-4 h-4 text-amber-300" /> পাসওয়ার্ড পরিবর্তন
           </button>
 
           <button
@@ -2482,6 +2535,119 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </button>
             </div>
 
+            {/* 5. Change Admin Password Card */}
+            <div className="p-5 rounded-2xl bg-purple-50 border border-purple-200 flex flex-col justify-between space-y-4">
+              <div className="space-y-2">
+                <div className="w-10 h-10 rounded-xl bg-purple-700 text-white flex items-center justify-center">
+                  <Lock className="w-5 h-5" />
+                </div>
+                <h4 className="font-bold text-purple-950 text-base">৫. অ্যাডমিন পাসওয়ার্ড পরিবর্তন</h4>
+                <p className="text-xs text-stone-600 leading-relaxed">
+                  বর্তমান ইউজার: <code className="bg-white px-1.5 py-0.5 rounded font-mono font-bold text-purple-900">{data.adminSecurity?.username || 'admin'}</code>
+                  <br />প্যানেলে প্রবেশের পাসওয়ার্ড এখান থেকে পরিবর্তন করুন।
+                </p>
+              </div>
+              <button
+                onClick={() => setShowSecurityModal(true)}
+                className="w-full py-2.5 bg-purple-800 hover:bg-purple-900 text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Lock className="w-4 h-4 text-amber-300" /> নতুন পাসওয়ার্ড সেট করুন
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* Admin Password Change Modal */}
+      {showSecurityModal && (
+        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border-2 border-emerald-700/20 space-y-5 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-stone-200">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-xl bg-emerald-800 text-amber-300 flex items-center justify-center shadow-xs">
+                  <Lock className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-stone-900">অ্যাডমিন পাসওয়ার্ড পরিবর্তন</h3>
+                  <p className="text-[11px] text-stone-500">আপনার অ্যাডমিন লগইন তথ্য আপডেট করুন</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowSecurityModal(false)}
+                className="p-1.5 text-stone-400 hover:text-stone-700 rounded-lg hover:bg-stone-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveSecurity} className="space-y-4 text-xs sm:text-sm">
+              <div>
+                <label className="block font-bold text-stone-800 mb-1">অ্যাডমিন ইউজারনেম *</label>
+                <input
+                  type="text"
+                  value={securityForm.username}
+                  onChange={(e) => setSecurityForm({ ...securityForm, username: e.target.value })}
+                  placeholder="যেমন: admin"
+                  className="w-full p-2.5 rounded-xl border border-stone-300 focus:border-emerald-600 font-mono font-bold"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-stone-800 mb-1">বর্তমান পাসওয়ার্ড *</label>
+                <input
+                  type="password"
+                  value={securityForm.currentPassword}
+                  onChange={(e) => setSecurityForm({ ...securityForm, currentPassword: e.target.value })}
+                  placeholder="বর্তমান পাসওয়ার্ড লিখুন"
+                  className="w-full p-2.5 rounded-xl border border-stone-300 focus:border-emerald-600 font-mono"
+                  required
+                />
+                <span className="text-[10px] text-stone-500 mt-0.5 block">ডিফল্ট পাসওয়ার্ড: vaiibondhu113</span>
+              </div>
+
+              <div>
+                <label className="block font-bold text-stone-800 mb-1">নতুন পাসওয়ার্ড *</label>
+                <input
+                  type="password"
+                  value={securityForm.newPassword}
+                  onChange={(e) => setSecurityForm({ ...securityForm, newPassword: e.target.value })}
+                  placeholder="নতুন গোপন পাসওয়ার্ড লিখুন"
+                  className="w-full p-2.5 rounded-xl border border-stone-300 focus:border-emerald-600 font-mono font-bold"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-stone-800 mb-1">নতুন পাসওয়ার্ড নিশ্চিত করুন *</label>
+                <input
+                  type="password"
+                  value={securityForm.confirmPassword}
+                  onChange={(e) => setSecurityForm({ ...securityForm, confirmPassword: e.target.value })}
+                  placeholder="পুনরায় নতুন পাসওয়ার্ড লিখুন"
+                  className="w-full p-2.5 rounded-xl border border-stone-300 focus:border-emerald-600 font-mono font-bold"
+                  required
+                />
+              </div>
+
+              <div className="flex justify-end gap-2.5 pt-3 border-t border-stone-200">
+                <button
+                  type="button"
+                  onClick={() => setShowSecurityModal(false)}
+                  className="px-4 py-2.5 rounded-xl border border-stone-300 font-bold text-stone-600 hover:bg-stone-50 cursor-pointer"
+                >
+                  বাতিল
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl font-bold flex items-center gap-1.5 shadow-md cursor-pointer transition-colors"
+                >
+                  <Check className="w-4 h-4 text-amber-300" />
+                  পাসওয়ার্ড সংরক্ষণ করুন
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

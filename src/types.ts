@@ -91,6 +91,10 @@ export interface SocietyData {
   rules: SocietyRule[];
   committee: CommitteeMember[];
   months2026?: string[]; // month keys active in 2026, e.g. ['01', '02', '03']
+  adminSecurity?: {
+    username: string;
+    password: string;
+  };
 }
 
 export type AuthRole = 'guest' | 'member' | 'admin';

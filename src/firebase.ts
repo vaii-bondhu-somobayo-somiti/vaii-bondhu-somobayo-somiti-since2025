@@ -10,6 +10,7 @@ import {
 } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 import { SocietyData } from './types';
+import { INITIAL_SOCIETY_DATA } from './data/initialData';
 
 // 1. Initialize Firebase App & Firestore Database instance
 const app = initializeApp(firebaseConfig);
@@ -93,25 +94,44 @@ export function subscribeToSocietyCloudData(
   const unsubscribe = onSnapshot(
     docRef,
     async (snapshot) => {
-      if (snapshot.exists()) {
-        const cloudData = snapshot.data() as SocietyData;
-        onDataLoaded(cloudData);
-      } else {
-        // If Cloud document does not exist yet, seed it with the initial/local data
-        if (initialFallbackData) {
-          try {
-            await setDoc(docRef, initialFallbackData);
-            onDataLoaded(initialFallbackData);
-          } catch (writeErr) {
-            handleFirestoreError(writeErr, OperationType.WRITE, `${SOCIETY_DOC_PATH}/${MAIN_DOC_ID}`);
+      try {
+        if (snapshot.exists()) {
+          const rawCloud = snapshot.data() as Partial<SocietyData>;
+          const sanitized: SocietyData = {
+            ...INITIAL_SOCIETY_DATA,
+            ...rawCloud,
+            bankAccount: {
+              ...INITIAL_SOCIETY_DATA.bankAccount,
+              ...(rawCloud.bankAccount || {})
+            },
+            members: Array.isArray(rawCloud.members) && rawCloud.members.length > 0
+              ? rawCloud.members
+              : (initialFallbackData?.members || INITIAL_SOCIETY_DATA.members),
+            expenses: Array.isArray(rawCloud.expenses) ? rawCloud.expenses : INITIAL_SOCIETY_DATA.expenses,
+            rules: Array.isArray(rawCloud.rules) && rawCloud.rules.length > 0 ? rawCloud.rules : INITIAL_SOCIETY_DATA.rules,
+            committee: Array.isArray(rawCloud.committee) && rawCloud.committee.length > 0 ? rawCloud.committee : INITIAL_SOCIETY_DATA.committee,
+            notices: Array.isArray(rawCloud.notices) ? rawCloud.notices : INITIAL_SOCIETY_DATA.notices,
+            paymentSubmissions: Array.isArray(rawCloud.paymentSubmissions) ? rawCloud.paymentSubmissions : INITIAL_SOCIETY_DATA.paymentSubmissions
+          };
+          onDataLoaded(sanitized);
+        } else {
+          // If Cloud document does not exist yet, seed it with the initial/local data
+          if (initialFallbackData) {
+            try {
+              await setDoc(docRef, initialFallbackData);
+              onDataLoaded(initialFallbackData);
+            } catch (writeErr) {
+              console.warn("Could not seed initial cloud document:", writeErr);
+            }
           }
         }
+      } catch (err) {
+        console.error("Error processing cloud snapshot data:", err);
       }
     },
     (error) => {
-      console.warn("Firestore snapshot sync warning:", error.message);
+      console.warn("Firestore snapshot sync warning (will fallback to local cache):", error.message);
       if (onError) onError(error);
-      handleFirestoreError(error, OperationType.GET, `${SOCIETY_DOC_PATH}/${MAIN_DOC_ID}`);
     }
   );
 

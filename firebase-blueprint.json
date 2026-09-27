@@ -1,0 +1,46 @@
+{
+  "entities": {
+    "SocietyData": {
+      "title": "SocietyData",
+      "description": "Comprehensive state of Bhai-Bondhu Somobay Somiti including members, expenses, committee, rules and accounts",
+      "type": "object",
+      "properties": {
+        "members": {
+          "type": "array",
+          "description": "List of society members"
+        },
+        "expenses": {
+          "type": "array",
+          "description": "List of expense records"
+        },
+        "rules": {
+          "type": "array",
+          "description": "Society operational rules"
+        },
+        "committee": {
+          "type": "array",
+          "description": "Committee members and designations"
+        },
+        "notices": {
+          "type": "array",
+          "description": "Official notices"
+        },
+        "stats": {
+          "type": "object",
+          "description": "Financial statistics and balances"
+        },
+        "lastUpdated": {
+          "type": "string",
+          "description": "ISO timestamp of last update"
+        }
+      },
+      "required": ["members", "expenses", "stats"]
+    }
+  },
+  "firestore": {
+    "/society_data/{docId}": {
+      "schema": "SocietyData",
+      "description": "Stores the central society data document"
+    }
+  }
+}

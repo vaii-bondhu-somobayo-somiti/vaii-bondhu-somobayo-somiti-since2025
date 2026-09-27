@@ -1,0 +1,6 @@
+{
+  "name": "ভাই-বন্ধু সমবায় সমিতি",
+  "description": "ভাই-বন্ধু সমবায় সমিতির অফিসিয়াল ওয়েবসাইট ও হিসাব ব্যবস্থাপনা পোর্টাল - মধ্য মুজির কান্দি, পাঠান বাজার, মতলব উত্তর, চাঁদপুর | ২০২৫",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

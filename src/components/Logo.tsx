@@ -174,10 +174,10 @@ export const Logo: React.FC<LogoProps> = ({ size = 48, className = '', showText 
             </textPath>
           </text>
 
-          {/* Bottom Arc Text: মধ্য মুজির কান্দি, পাঠান বাজার, মতলব উত্তর, চাঁদপুর। */}
+          {/* Bottom Arc Text: মধ্য মুক্তির কান্দি, পাঠান বাজার, মতলব উত্তর, চাঁদপুর। */}
           <text fill="#ffffff" fontSize="13.5" fontWeight="600" fontFamily="'Hind Siliguri', sans-serif" letterSpacing="0.5">
             <textPath href="#bottom-arc-text" startOffset="50%" textAnchor="middle">
-              মধ্য মুজির কান্দি, পাঠান বাজার, মতলব উত্তর,চাঁদপুর।
+              মধ্য মুক্তির কান্দি, পাঠান বাজার, মতলব উত্তর,চাঁদপুর।
             </textPath>
           </text>
         </svg>
@@ -189,7 +189,7 @@ export const Logo: React.FC<LogoProps> = ({ size = 48, className = '', showText 
             ভাই-বন্ধু সমবায় সমিতি
           </span>
           <span className="text-xs text-emerald-700 font-medium mt-1">
-            মধ্য মুজির কান্দি, মতলব উত্তর, চাঁদপুর
+            মধ্য মুক্তির কান্দি, মতলব উত্তর, চাঁদপুর
           </span>
         </div>
       )}

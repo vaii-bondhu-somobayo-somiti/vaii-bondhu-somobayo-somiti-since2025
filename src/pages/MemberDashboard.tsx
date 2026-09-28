@@ -347,7 +347,7 @@ export const MemberDashboard: React.FC<MemberDashboardProps> = ({
                 ভাই-বন্ধু সমবায় সমিতি
               </h2>
               <p className="text-xs text-stone-600">
-                মধ্য মুজির কান্দি, পাঠান বাজার, মতলব উত্তর, চাঁদপুর | স্থাপিত: ২০২৫
+                {data.address || 'মধ্য মুক্তির কান্দি, পাঠান বাজার, মতলব উত্তর, চাঁদপুর | স্থাপিত: ২০২৫'}
               </p>
               <span className="inline-block mt-1 bg-emerald-100 text-emerald-900 text-[10px] font-bold px-2 py-0.5 rounded">
                 সদস্য ব্যক্তিগত সঞ্চয় ও চাঁদা বিবরণী

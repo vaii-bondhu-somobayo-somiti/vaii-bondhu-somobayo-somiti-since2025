@@ -39,7 +39,7 @@ export const RulesPage: React.FC<RulesPageProps> = ({ rules, data, onOpenDocsMod
   const handleCopyAll = () => {
     const allText = `${data?.societyName || 'ভাই-বন্ধু সমবায় সমিতি'}\nসমিতির নিয়ম নীতিমালা:\n\n` +
       activeRules.map(r => `${r.no}/ ${r.description}`).join('\n\n') +
-      `\n\n— ${data?.motto || 'সমবায়ে গড়ি, সমৃদ্ধ ভবিষ্যৎ'} —\n${data?.address || 'মধ্য মুজির কান্দি, পাঠান বাজার, মতলব উত্তর, চাঁদপুর | ২০২৫'}`;
+      `\n\n— ${data?.motto || 'সমবায়ে গড়ি, সমৃদ্ধ ভবিষ্যৎ'} —\n${data?.address || 'মধ্য মুক্তির কান্দি, পাঠান বাজার, মতলব উত্তর, চাঁদপুর | ২০২৫'}`;
     navigator.clipboard.writeText(allText);
     setCopiedAll(true);
     setTimeout(() => setCopiedAll(false), 2000);
@@ -205,7 +205,7 @@ export const RulesPage: React.FC<RulesPageProps> = ({ rules, data, onOpenDocsMod
             উক্ত নীতিমালা সকল সদস্যের পূর্ণ সম্মতিক্রমে ও উপস্থিতিতে স্বাক্ষরিত ও কার্যকর।
           </p>
           <p className="text-[11px] text-emerald-300">
-            স্থান: মধ্য মুজির কান্দি, পাঠান বাজার, মতলব উত্তর, চাঁদপুর | প্রকাশকাল: ২০২৫
+            স্থান: {data?.address ? data.address.replace(' | ২০২৫', '') : 'মধ্য মুক্তির কান্দি, পাঠান বাজার, মতলব উত্তর, চাঁদপুর'} | প্রকাশকাল: ২০২৫
           </p>
         </div>
 

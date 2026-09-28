@@ -250,14 +250,14 @@ export const OriginalDocsModal: React.FC<OriginalDocsModalProps> = ({
                   <path id="top-arc-text2" d="M 60,200 A 140,140 0 0,1 340,200" fill="none" />
                   <path id="bottom-arc-text2" d="M 342,200 A 142,142 0 0,1 58,200" fill="none" />
                   <text fill="#ffffff" fontSize="13.5" fontWeight="600">
-                    <textPath href="#bottom-arc-text2" startOffset="50%" textAnchor="middle">মধ্য মুজির কান্দি, পাঠান বাজার, মতলব উত্তর,চাঁদপুর।</textPath>
+                    <textPath href="#bottom-arc-text2" startOffset="50%" textAnchor="middle">মধ্য মুক্তির কান্দি, পাঠান বাজার, মতলব উত্তর,চাঁদপুর।</textPath>
                   </text>
                 </svg>
               </div>
 
               <div>
                 <h4 className="text-xl font-bold text-emerald-950">ভাই বন্ধু সমবায় সমিতি</h4>
-                <p className="text-sm text-stone-600 mt-1">মধ্য মুজির কান্দি, পাঠান বাজার, মতলব উত্তর, চাঁদপুর | ২০২৫</p>
+                <p className="text-sm text-stone-600 mt-1">মধ্য মুক্তির কান্দি, পাঠান বাজার, মতলব উত্তর, চাঁদপুর | ২০২৫</p>
                 <span className="inline-block mt-3 bg-amber-100 text-amber-900 border border-amber-300 px-3 py-1 rounded-full text-xs font-semibold">
                   একতা ও সংহতির প্রতীক
                 </span>

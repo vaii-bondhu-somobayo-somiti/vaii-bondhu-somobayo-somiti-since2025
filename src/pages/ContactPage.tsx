@@ -67,7 +67,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ data }) => {
                   ভাই-বন্ধু সমবায় সমিতি
                 </h3>
                 <p className="text-sm text-stone-700 mt-1 font-semibold">
-                  মধ্য মুজির কান্দি, পাঠান বাজার, মতলব উত্তর, চাঁদপুর | ২০২৫
+                  {data?.address || 'মধ্য মুক্তির কান্দি, পাঠান বাজার, মতলব উত্তর, চাঁদপুর | ২০২৫'}
                 </p>
                 <p className="text-xs text-stone-500 mt-1">
                   ডাকঘর: ছেঙ্গারচর বাজার, থানা: মতলব উত্তর, জেলা: চাঁদপুর, বাংলাদেশ।

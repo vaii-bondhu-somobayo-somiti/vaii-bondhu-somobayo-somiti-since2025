@@ -248,9 +248,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     tagline: data.tagline || 'একতা সাথে থাকি, উন্নতির পথে',
     motto: data.motto || 'সমবায়ে শক্তি সবার জন্য সমৃদ্ধি • সমবায়ে গড়ি, সমৃদ্ধ ভবিষ্যৎ',
     establishedYear: data.establishedYear || '২০২৫',
-    address: data.address || 'মধ্য মুজির কান্দি, পাঠান বাজার, মতলব উত্তর, চাঁদপুর | ২০২৫',
+    address: data.address || 'মধ্য মুক্তির কান্দি, পাঠান বাজার, মতলব উত্তর, চাঁদপুর | ২০২৫',
     monthlyFeeDefault: data.monthlyFeeDefault || 2500
   });
+
+  // Sync societyForm if incoming data updates
+  React.useEffect(() => {
+    setSocietyForm({
+      societyName: data.societyName || 'ভাই-বন্ধু সমবায় সমিতি',
+      tagline: data.tagline || 'একতা সাথে থাকি, উন্নতির পথে',
+      motto: data.motto || 'সমবায়ে শক্তি সবার জন্য সমৃদ্ধি • সমবায়ে গড়ি, সমৃদ্ধ ভবিষ্যৎ',
+      establishedYear: data.establishedYear || '২০২৫',
+      address: data.address || 'মধ্য মুক্তির কান্দি, পাঠান বাজার, মতলব উত্তর, চাঁদপুর | ২০২৫',
+      monthlyFeeDefault: data.monthlyFeeDefault || 2500
+    });
+  }, [data.societyName, data.tagline, data.motto, data.establishedYear, data.address, data.monthlyFeeDefault]);
 
   const handleSaveSocietyInfo = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1243,7 +1255,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   type="text"
                   value={societyForm.address}
                   onChange={(e) => setSocietyForm({ ...societyForm, address: e.target.value })}
-                  placeholder="যেমন: মধ্য মুজির কান্দি, পাঠান বাজার, মতলব উত্তর, চাঁদপুর | ২০২৫"
+                  placeholder="যেমন: মধ্য মুক্তির কান্দি, পাঠান বাজার, মতলব উত্তর, চাঁদপুর | ২০২৫"
                   className="w-full p-2.5 rounded-xl border border-stone-300 focus:border-emerald-600 text-sm"
                   required
                 />

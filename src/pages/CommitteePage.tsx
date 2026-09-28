@@ -75,7 +75,7 @@ export const CommitteePage: React.FC<CommitteePageProps> = ({ committee, data, o
         </div>
 
         <p className="text-xs sm:text-sm text-emerald-200">
-          মধ্য মুজির কান্দি, পাঠান বাজার, মতলব উত্তর, চাঁদপুর | স্থাপিত: ২০২৫
+          মধ্য মুক্তির কান্দি, পাঠান বাজার, মতলব উত্তর, চাঁদপুর | স্থাপিত: ২০২৫
         </p>
 
         <div className="pt-2">
@@ -407,7 +407,7 @@ export const CommitteePage: React.FC<CommitteePageProps> = ({ committee, data, o
           — সমবায়ে গড়ি, সমৃদ্ধ ভবিষ্যৎ —
         </h4>
         <p className="text-xs text-stone-500 mt-1">
-          ভাই-বন্ধু সমবায় সমিতি • মধ্য মুজির কান্দি, পাঠান বাজার, মতলব উত্তর, চাঁদপুর
+          ভাই-বন্ধু সমবায় সমিতি • মধ্য মুক্তির কান্দি, পাঠান বাজার, মতলব উত্তর, চাঁদপুর
         </p>
       </div>
 

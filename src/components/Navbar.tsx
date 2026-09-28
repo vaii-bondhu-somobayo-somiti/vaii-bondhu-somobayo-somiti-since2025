@@ -63,7 +63,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="flex items-center gap-2 overflow-hidden">
             <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
             <span className="truncate text-emerald-100 font-medium">
-              একতা সাথে থাকি, উন্নতির পথে • মধ্য মুজির কান্দি, মতলব উত্তর, চাঁদপুর
+              একতা সাথে থাকি, উন্নতির পথে • মধ্য মুক্তির কান্দি, মতলব উত্তর, চাঁদপুর
             </span>
           </div>
 
@@ -108,7 +108,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </span>
               </div>
               <p className="text-[11px] text-emerald-700 font-medium hidden sm:block">
-                মধ্য মুজির কান্দি, পাঠান বাজার, মতলব উত্তর, চাঁদপুর
+                মধ্য মুক্তির কান্দি, পাঠান বাজার, মতলব উত্তর, চাঁদপুর
               </p>
             </div>
           </div>

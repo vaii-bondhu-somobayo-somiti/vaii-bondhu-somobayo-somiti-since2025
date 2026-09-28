@@ -133,7 +133,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavClick, onOpenDocsModal }) =
               <div className="flex items-start gap-2.5">
                 <MapPin className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                 <span>
-                  <strong>মধ্য মুজির কান্দি, পাঠান বাজার, मतলব উত্তর, চাঁদপুর | ২০২৫</strong>
+                  <strong>মধ্য মুক্তির কান্দি, পাঠান বাজার, মতলব উত্তর, চাঁদপুর | ২০২৫</strong>
                 </span>
               </div>
 
@@ -170,7 +170,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavClick, onOpenDocsModal }) =
               সমবায়ে গড়ি, সমৃদ্ধ ভবিষ্যৎ
             </p>
             <p className="text-stone-400 mt-1">
-              ঠিকানা: মধ্য মুজির কান্দি, পাঠান বাজার, মতলব উত্তর, চাঁদপুর | ২০২৫
+              ঠিকানা: মধ্য মুক্তির কান্দি, পাঠান বাজার, মতলব উত্তর, চাঁদপুর | ২০২৫
             </p>
           </div>
 

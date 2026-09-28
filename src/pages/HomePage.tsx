@@ -66,7 +66,7 @@ export const HomePage: React.FC<HomePageProps> = ({ data, onNavigate, onOpenDocs
               "একতা সাথে থাকি, উন্নতির পথে"
             </p>
             <p className="text-sm sm:text-base text-emerald-100 max-w-2xl mx-auto pt-2 font-medium">
-              মধ্য মুজির কান্দি, পাঠান বাজার, মতলব উত্তর, চাঁদপুর
+              {data?.address ? data.address.replace(' | ২০২৫', '') : 'মধ্য মুক্তির কান্দি, পাঠান বাজার, মতলব উত্তর, চাঁদপুর'}
             </p>
           </div>
 

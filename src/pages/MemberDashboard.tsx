@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { SocietyData, Member } from '../types';
 import { formatCurrency, toBengaliNumber, updateMemberPhoto } from '../utils/storage';
 import { compressAndReadFile } from '../utils/imageHelper';
+import { calculateMemberAllTotal } from './MemberList';
 import { 
   UserCheck, 
   CreditCard, 
@@ -98,7 +99,13 @@ export const MemberDashboard: React.FC<MemberDashboardProps> = ({
 
   const isAugPaid = member.august !== null && member.august > 0;
   const isSepPaid = member.september !== null && member.september > 0;
-  const totalDeposit = (member.august || 0) + (member.september || 0) + (member.october || 0) + (member.downPayment || 0);
+  const dp2025_1 = member.downPayment2025_1 !== undefined ? member.downPayment2025_1 : (member.downPayment || 0);
+  const dp2025_2 = member.downPayment2025_2 || 0;
+  const dp2026_1 = member.downPayment2026_1 || 0;
+  const dp2026_2 = member.downPayment2026_2 || 0;
+  const totalDownPaymentMember = dp2025_1 + dp2025_2 + dp2026_1 + dp2026_2;
+
+  const totalDeposit = calculateMemberAllTotal(member);
 
   const handlePrintReceipt = () => {
     window.print();
@@ -294,12 +301,12 @@ export const MemberDashboard: React.FC<MemberDashboardProps> = ({
         {/* ডাউন পেমেন্ট */}
         <div className="bg-white p-5 rounded-2xl border-2 border-stone-200 shadow-md flex items-center justify-between">
           <div>
-            <span className="text-xs text-stone-500 font-bold block uppercase">৬ মাসের ডাউন পেমেন্ট</span>
+            <span className="text-xs text-stone-500 font-bold block uppercase">মোট ডাউন পেমেন্ট (৬ মাসভিত্তিক)</span>
             <h3 className="text-2xl font-black text-stone-900 mt-1">
-              {member.downPayment ? formatCurrency(member.downPayment) : '০ টাকা'}
+              {totalDownPaymentMember ? formatCurrency(totalDownPaymentMember) : '০ টাকা'}
             </h3>
             <span className="text-[10px] text-stone-500 font-medium">
-              নির্ধারিত: ৫,০০০ টাকা
+              ২০২৫: {formatCurrency(dp2025_1 + dp2025_2)} | ২০২৬: {formatCurrency(dp2026_1 + dp2026_2)}
             </span>
           </div>
           <div className="w-12 h-12 rounded-xl bg-blue-100 text-blue-900 flex items-center justify-center">
@@ -432,14 +439,14 @@ export const MemberDashboard: React.FC<MemberDashboardProps> = ({
               </tr>
 
               <tr>
-                <td className="p-3 font-medium">অর্ধবার্ষিক ডাউন পেমেন্ট</td>
-                <td className="p-3 text-center font-mono">৫,০০০ ৳</td>
+                <td className="p-3 font-medium">ডাউন পেমেন্ট (৬ মাসভিত্তিক)</td>
+                <td className="p-3 text-center font-mono">৬ মাস পর পর</td>
                 <td className="p-3 text-center font-mono">
-                  {member.downPayment ? `${member.downPayment} ৳` : '—'}
+                  {totalDownPaymentMember ? `${totalDownPaymentMember} ৳` : '—'}
                 </td>
-                <td className="p-3 text-center text-stone-500">আসন্ন কিস্তি</td>
+                <td className="p-3 text-center text-emerald-700 font-semibold">হিসাবভুক্ত</td>
                 <td className="p-3 text-right font-mono font-bold">
-                  {formatCurrency(member.downPayment || 0)}
+                  {formatCurrency(totalDownPaymentMember)}
                 </td>
               </tr>
 

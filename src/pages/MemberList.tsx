@@ -42,7 +42,15 @@ interface MemberListProps {
 }
 
 export const calculateMemberAllTotal = (m: Member): number => {
-  let total = (m.downPayment || 0) + (m.fine || 0);
+  const dp2025_1 = m.downPayment2025_1 !== undefined ? m.downPayment2025_1 : (m.downPayment || 0);
+  const dp2025_2 = m.downPayment2025_2 || 0;
+  const dp2026_1 = m.downPayment2026_1 || 0;
+  const dp2026_2 = m.downPayment2026_2 || 0;
+  const fine2025 = m.fine2025 !== undefined ? m.fine2025 : (m.fine || 0);
+  const fine2026 = m.fine2026 || 0;
+
+  let total = dp2025_1 + dp2025_2 + dp2026_1 + dp2026_2 + fine2025 + fine2026;
+
   if (m.payments2025) {
     Object.values(m.payments2025).forEach((val) => {
       if (val && val > 0) total += val;

@@ -8,7 +8,13 @@ export interface Member {
   september: number | null; // 2500 or null if due
   october: number | null;
   fine: number;
+  fine2025?: number;
+  fine2026?: number;
   downPayment: number;
+  downPayment2025_1?: number; // 2025 ১ম ৬ মাস ডাউন পেমেন্ট
+  downPayment2025_2?: number; // 2025 ২য় ৬ মাস ডাউন পেমেন্ট
+  downPayment2026_1?: number; // 2026 ১ম ৬ মাস ডাউন পেমেন্ট
+  downPayment2026_2?: number; // 2026 ২য় ৬ মাস ডাউন পেমেন্ট
   joinedDate: string;
   notes?: string;
   payments2025?: Record<string, number | null>; // key: '01' to '12' -> monthly amount or null

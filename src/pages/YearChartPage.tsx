@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { SocietyData, CurrentUser, Member } from '../types';
+import { saveStoredData } from '../utils/storage';
 import { 
   Calendar, 
   Coins, 
@@ -115,54 +116,6 @@ export const YearChartPage: React.FC<YearChartPageProps> = ({
     return `৳ ${toBn(amount.toLocaleString('en-IN'))}`;
   };
 
-  // 1. Calculate 2025 Total Deposit (Auto)
-  const totalDeposit2025 = data.members.reduce((sum, m) => {
-    let mTotal = 0;
-    MONTHS_2025.forEach((mo) => {
-      let amt = m.payments2025?.[mo.key];
-      // Fallback to legacy fields if not in payments2025
-      if (amt === undefined) {
-        if (mo.key === '08') amt = m.august;
-        else if (mo.key === '09') amt = m.september;
-        else if (mo.key === '10') amt = m.october;
-      }
-      if (amt && amt > 0) mTotal += amt;
-    });
-    // Add downpayment if any
-    if (m.downPayment && m.downPayment > 0) {
-      mTotal += m.downPayment;
-    }
-    return sum + mTotal;
-  }, 0);
-
-  // Active months for 2026
-  const activeMonths2026Keys = (data.months2026 && data.months2026.length > 0) 
-    ? data.months2026 
-    : ['01', '02', '03'];
-
-  const activeMonths2026 = ALL_MONTHS_2026.filter(m => activeMonths2026Keys.includes(m.key));
-
-  // 2. Calculate 2026 Total Deposit (Auto)
-  const totalDeposit2026 = data.members.reduce((sum, m) => {
-    let mTotal = 0;
-    activeMonths2026Keys.forEach((key) => {
-      const amt = m.payments2026?.[key];
-      if (amt && amt > 0) mTotal += amt;
-    });
-    return sum + mTotal;
-  }, 0);
-
-  // 3. Total Expenses
-  const totalExpenses = (data.expenses || []).reduce((sum, exp) => sum + (exp.amount || 0), 0);
-
-  // 4. Total Society Balance = 2025 Total + 2026 Total - Total Expenses
-  const totalSocietyBalance = (totalDeposit2025 + totalDeposit2026) - totalExpenses;
-
-  // Active months for current page
-  const currentMonths = year === 2025 
-    ? MONTHS_2025 
-    : activeMonths2026;
-
   // Helper to get payment amount for member in given year and month
   const getMemberPayment = (m: Member, targetYear: number, monthKey: string): number | null => {
     if (targetYear === 2025) {
@@ -181,20 +134,54 @@ export const YearChartPage: React.FC<YearChartPageProps> = ({
     }
   };
 
+  // Total Down Payment & Fine for members
+  const totalDownPaymentAll = data.members.reduce((sum, m) => sum + (m.downPayment || 0), 0);
+  const totalFineAll = data.members.reduce((sum, m) => sum + (m.fine || 0), 0);
+
   // Helper to calculate total for a single member in current year
   const getMemberYearTotal = (m: Member, targetYear: number): number => {
     if (targetYear === 2025) {
-      return MONTHS_2025.reduce((sum, mo) => {
+      const monthsTotal = MONTHS_2025.reduce((sum, mo) => {
         const val = getMemberPayment(m, 2025, mo.key);
         return sum + (val || 0);
-      }, (m.downPayment || 0));
+      }, 0);
+      return monthsTotal + (m.downPayment || 0) + (m.fine || 0);
     } else {
-      return activeMonths2026Keys.reduce((sum, key) => {
+      const monthsTotal = activeMonths2026Keys.reduce((sum, key) => {
         const val = getMemberPayment(m, 2026, key);
         return sum + (val || 0);
       }, 0);
+      return monthsTotal;
     }
   };
+
+  // 1. Calculate 2025 Total Deposit (Auto)
+  const totalDeposit2025 = data.members.reduce((sum, m) => {
+    return sum + getMemberYearTotal(m, 2025);
+  }, 0);
+
+  // Active months for 2026
+  const activeMonths2026Keys = (data.months2026 && data.months2026.length > 0) 
+    ? data.months2026 
+    : ['01', '02', '03'];
+
+  const activeMonths2026 = ALL_MONTHS_2026.filter(m => activeMonths2026Keys.includes(m.key));
+
+  // 2. Calculate 2026 Total Deposit (Auto)
+  const totalDeposit2026 = data.members.reduce((sum, m) => {
+    return sum + getMemberYearTotal(m, 2026);
+  }, 0);
+
+  // 3. Total Expenses
+  const totalExpenses = (data.expenses || []).reduce((sum, exp) => sum + (exp.amount || 0), 0);
+
+  // 4. Total Society Balance = 2025 Total + 2026 Total - Total Expenses
+  const totalSocietyBalance = (totalDeposit2025 + totalDeposit2026) - totalExpenses;
+
+  // Active months for current page
+  const currentMonths = year === 2025 
+    ? MONTHS_2025 
+    : activeMonths2026;
 
   // Monthly totals across all members
   const getMonthTotal = (monthKey: string): number => {
@@ -242,7 +229,15 @@ export const YearChartPage: React.FC<YearChartPageProps> = ({
   // Handle single cell edit
   const handleOpenCellEdit = (m: Member, monthKey: string, monthName: string) => {
     if (!isAdmin) return;
-    const currentAmt = getMemberPayment(m, year, monthKey);
+    let currentAmt: number | null = null;
+    if (monthKey === 'downpayment') {
+      currentAmt = m.downPayment || 0;
+    } else if (monthKey === 'fine') {
+      currentAmt = m.fine || 0;
+    } else {
+      currentAmt = getMemberPayment(m, year, monthKey);
+    }
+
     setEditingCell({
       memberId: m.id,
       memberName: m.name,
@@ -265,6 +260,20 @@ export const YearChartPage: React.FC<YearChartPageProps> = ({
 
     const updatedMembers = data.members.map((m) => {
       if (m.id !== editingCell.memberId) return m;
+
+      if (editingCell.monthKey === 'downpayment') {
+        return {
+          ...m,
+          downPayment: parsedAmt || 0
+        };
+      }
+
+      if (editingCell.monthKey === 'fine') {
+        return {
+          ...m,
+          fine: parsedAmt || 0
+        };
+      }
 
       if (year === 2025) {
         const newPayments2025 = {
@@ -298,8 +307,24 @@ export const YearChartPage: React.FC<YearChartPageProps> = ({
     };
 
     onDataUpdated(updatedData);
-    showNotification('success', `${editingCell.memberName} এর ${editingCell.monthName} মাসের জমা সফলভাবে সংরক্ষিত হয়েছে!`);
+    saveStoredData(updatedData);
+    showNotification('success', `${editingCell.memberName} এর ${editingCell.monthName} সফলভাবে সংরক্ষিত হয়েছে!`);
     setEditingCell(null);
+  };
+
+  // Handle bulk special edit (down payment / fine)
+  const handleOpenBulkSpecialEdit = (specialKey: 'downpayment' | 'fine', title: string) => {
+    if (!isAdmin) return;
+    const initialMap: Record<string, number | null> = {};
+    data.members.forEach((m) => {
+      initialMap[m.id] = specialKey === 'downpayment' ? (m.downPayment || 0) : (m.fine || 0);
+    });
+    setBulkAmounts(initialMap);
+    setBulkMonthModal({
+      year,
+      monthKey: specialKey,
+      monthName: title
+    });
   };
 
   // Handle bulk month edit
@@ -323,6 +348,18 @@ export const YearChartPage: React.FC<YearChartPageProps> = ({
 
     const updatedMembers = data.members.map((m) => {
       const amt = bulkAmounts[m.id];
+      if (bulkMonthModal.monthKey === 'downpayment') {
+        return {
+          ...m,
+          downPayment: amt || 0
+        };
+      }
+      if (bulkMonthModal.monthKey === 'fine') {
+        return {
+          ...m,
+          fine: amt || 0
+        };
+      }
       if (bulkMonthModal.year === 2025) {
         const newPayments2025 = {
           ...(m.payments2025 || {}),
@@ -354,7 +391,8 @@ export const YearChartPage: React.FC<YearChartPageProps> = ({
     };
 
     onDataUpdated(updatedData);
-    showNotification('success', `${bulkMonthModal.monthName} ${toBn(bulkMonthModal.year)} মাসের সকল সদস্যের হিসাব সংরক্ষিত হয়েছে!`);
+    saveStoredData(updatedData);
+    showNotification('success', `${bulkMonthModal.monthName} এর সকল সদস্যের হিসাব সংরক্ষিত হয়েছে!`);
     setBulkMonthModal(null);
   };
 
@@ -683,8 +721,29 @@ export const YearChartPage: React.FC<YearChartPageProps> = ({
                 <th className="py-3 px-2 text-center border-r border-stone-700 w-12 sticky left-0 z-20 bg-stone-800">
                   নং
                 </th>
-                <th className="py-3 px-3 border-r border-stone-700 min-w-[190px] sticky left-12 z-20 bg-stone-800 shadow-md">
+                <th className="py-3 px-3 border-r border-stone-700 min-w-[180px] sticky left-12 z-20 bg-stone-800 shadow-md">
                   সদস্যের নাম ও আইডি
+                </th>
+
+                {/* Down Payment Column */}
+                <th className="py-2.5 px-2 border-r border-stone-700 min-w-[105px] text-center bg-emerald-950/80 hover:bg-emerald-900 transition-colors">
+                  <div className="flex items-center justify-center gap-1">
+                    <span className="font-extrabold text-amber-300 text-xs">
+                      ডাউন পেমেন্ট
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-emerald-200 font-mono mt-0.5">
+                    মোট: {toBn(totalDownPaymentAll)} ৳
+                  </div>
+                  {isAdmin && (
+                    <button
+                      onClick={() => handleOpenBulkSpecialEdit('downpayment', 'ডাউন পেমেন্ট')}
+                      className="mt-1 px-1.5 py-0.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded text-[10px] font-semibold flex items-center gap-0.5 mx-auto transition-colors cursor-pointer"
+                      title="সকল সদস্যের ডাউন পেমেন্ট একবারে এডিট করুন"
+                    >
+                      <Edit3 className="w-2.5 h-2.5" /> এডিট
+                    </button>
+                  )}
                 </th>
 
                 {/* Month Columns */}
@@ -730,9 +789,30 @@ export const YearChartPage: React.FC<YearChartPageProps> = ({
                   );
                 })}
 
+                {/* Fine / Penalty Column */}
+                <th className="py-2.5 px-2 border-r border-stone-700 min-w-[95px] text-center bg-red-950/70 hover:bg-red-900 transition-colors">
+                  <div className="flex items-center justify-center gap-1">
+                    <span className="font-extrabold text-red-300 text-xs">
+                      জরিমানা
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-red-200 font-mono mt-0.5">
+                    মোট: {toBn(totalFineAll)} ৳
+                  </div>
+                  {isAdmin && (
+                    <button
+                      onClick={() => handleOpenBulkSpecialEdit('fine', 'জরিমানা')}
+                      className="mt-1 px-1.5 py-0.5 bg-red-800 hover:bg-red-700 text-white rounded text-[10px] font-semibold flex items-center gap-0.5 mx-auto transition-colors cursor-pointer"
+                      title="সকল সদস্যের জরিমানা একবারে এডিট করুন"
+                    >
+                      <Edit3 className="w-2.5 h-2.5" /> এডিট
+                    </button>
+                  )}
+                </th>
+
                 {/* Total Column */}
-                <th className="py-3 px-3 text-right border-l border-stone-700 min-w-[120px] bg-stone-900 sticky right-0 z-20 text-amber-300">
-                  মোট জমা
+                <th className="py-3 px-3 text-right border-l border-stone-700 min-w-[130px] bg-stone-900 sticky right-0 z-20 text-amber-300 shadow-md">
+                  সর্বমোট জমা
                 </th>
               </tr>
             </thead>
@@ -782,11 +862,29 @@ export const YearChartPage: React.FC<YearChartPageProps> = ({
                       </div>
                     </td>
 
+                    {/* Down Payment Cell */}
+                    <td 
+                      onClick={() => isAdmin && handleOpenCellEdit(m, 'downpayment', 'ডাউন পেমেন্ট')}
+                      className={`py-2 px-2 text-center border-r border-stone-200 transition-all ${
+                        isAdmin ? 'cursor-pointer hover:bg-emerald-100/80' : ''
+                      }`}
+                      title={isAdmin ? `ক্লিক করে ${m.name} এর ডাউন পেমেন্ট এডিট করুন` : ''}
+                    >
+                      {m.downPayment && m.downPayment > 0 ? (
+                        <span className="inline-block px-2 py-1 rounded-md bg-emerald-100 text-emerald-950 font-bold font-mono text-[11px] sm:text-xs border border-emerald-300 shadow-2xs">
+                          {toBn(m.downPayment)}
+                        </span>
+                      ) : (
+                        <span className="inline-block px-2 py-0.5 rounded-md bg-stone-100 text-stone-500 font-mono text-[11px]">
+                          ৳ ০
+                        </span>
+                      )}
+                    </td>
+
                     {/* Month Cells */}
                     {currentMonths.map((mo) => {
                       const amount = getMemberPayment(m, year, mo.key);
                       const isPaid = amount !== null && amount > 0;
-                      const isDue = amount === 0 || amount === null;
 
                       return (
                         <td 
@@ -810,6 +908,25 @@ export const YearChartPage: React.FC<YearChartPageProps> = ({
                       );
                     })}
 
+                    {/* Fine Cell */}
+                    <td 
+                      onClick={() => isAdmin && handleOpenCellEdit(m, 'fine', 'জরিমানা')}
+                      className={`py-2 px-2 text-center border-r border-stone-200 transition-all ${
+                        isAdmin ? 'cursor-pointer hover:bg-red-100/80' : ''
+                      }`}
+                      title={isAdmin ? `ক্লিক করে ${m.name} এর জরিমানা এডিট করুন` : ''}
+                    >
+                      {m.fine && m.fine > 0 ? (
+                        <span className="inline-block px-2 py-1 rounded-md bg-red-100 text-red-950 font-bold font-mono text-[11px] sm:text-xs border border-red-300 shadow-2xs">
+                          {toBn(m.fine)}
+                        </span>
+                      ) : (
+                        <span className="inline-block px-2 py-0.5 rounded-md bg-stone-100 text-stone-400 font-mono text-[11px]">
+                          ৳ ০
+                        </span>
+                      )}
+                    </td>
+
                     {/* Member Total */}
                     <td className="py-2 px-3 text-right font-mono font-black text-emerald-950 border-l border-stone-200 sticky right-0 z-10 bg-white group-hover:bg-emerald-50/60 shadow-xs">
                       {formatTaka(memberYearTotal)}
@@ -824,8 +941,13 @@ export const YearChartPage: React.FC<YearChartPageProps> = ({
               <tr>
                 <td colSpan={2} className="py-3 px-4 text-left border-r border-stone-700 sticky left-0 z-20 bg-stone-900">
                   <div className="font-extrabold text-amber-300">
-                    সর্বমোট আদায় (মাসভিত্তিক)
+                    সর্বমোট আদায় (মাসভিত্তিক ও অন্যান্য)
                   </div>
+                </td>
+
+                {/* Down Payment Total */}
+                <td className="py-3 px-2 text-center border-r border-stone-700 font-mono text-emerald-300 font-black">
+                  {toBn(totalDownPaymentAll)}
                 </td>
 
                 {/* Totals per month */}
@@ -837,6 +959,11 @@ export const YearChartPage: React.FC<YearChartPageProps> = ({
                     </td>
                   );
                 })}
+
+                {/* Fine Total */}
+                <td className="py-3 px-2 text-center border-r border-stone-700 font-mono text-red-300 font-black">
+                  {toBn(totalFineAll)}
+                </td>
 
                 {/* Grand Total */}
                 <td className="py-3 px-3 text-right font-mono font-black text-amber-300 text-sm border-l border-stone-700 sticky right-0 z-20 bg-stone-950">
@@ -861,7 +988,11 @@ export const YearChartPage: React.FC<YearChartPageProps> = ({
               <div className="flex items-center gap-2">
                 <Edit3 className="w-5 h-5 text-emerald-700" />
                 <h3 className="font-bold text-stone-900 text-lg">
-                  চাঁদা জমা সম্পাদনা
+                  {editingCell.monthKey === 'downpayment' 
+                    ? 'ডাউন পেমেন্ট সম্পাদনা' 
+                    : editingCell.monthKey === 'fine' 
+                    ? 'জরিমানা সম্পাদনা' 
+                    : 'চাঁদা জমা সম্পাদনা'}
                 </h3>
               </div>
               <button
@@ -883,21 +1014,31 @@ export const YearChartPage: React.FC<YearChartPageProps> = ({
                 <span className="font-mono font-bold text-emerald-800">{editingCell.memberId}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-stone-600">নির্ধারিত মাস:</span>
-                <span className="font-bold text-emerald-950">{editingCell.monthName} {toBn(year)}</span>
+                <span className="text-stone-600">খাত / বিবরণ:</span>
+                <span className="font-bold text-emerald-950">
+                  {editingCell.monthKey === 'downpayment' || editingCell.monthKey === 'fine'
+                    ? editingCell.monthName
+                    : `${editingCell.monthName} ${toBn(year)}`}
+                </span>
               </div>
             </div>
 
             <form onSubmit={handleSaveCellEdit} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-stone-800 mb-1">
-                  জমা টাকার পরিমাণ (৳)
+                  টাকার পরিমাণ (৳)
                 </label>
                 <input
                   type="number"
                   value={cellInputAmount}
                   onChange={(e) => setCellInputAmount(e.target.value)}
-                  placeholder="যেমন: 2500 বা বাকি থাকলে ফাঁকা / 0 রাখুন"
+                  placeholder={
+                    editingCell.monthKey === 'downpayment'
+                      ? 'যেমন: 1000 বা 2000'
+                      : editingCell.monthKey === 'fine'
+                      ? 'যেমন: 50 বা 100'
+                      : 'যেমন: 2500 বা বাকি থাকলে 0 রাখুন'
+                  }
                   className="w-full p-3 rounded-xl border-2 border-stone-300 focus:border-emerald-600 text-lg font-mono font-bold outline-hidden transition-all bg-stone-50 focus:bg-white"
                   autoFocus
                 />
@@ -907,34 +1048,100 @@ export const YearChartPage: React.FC<YearChartPageProps> = ({
               <div className="space-y-1.5">
                 <label className="text-[11px] font-bold text-stone-500">দ্রুত নির্বাচন করুন:</label>
                 <div className="grid grid-cols-4 gap-2 text-xs">
-                  <button
-                    type="button"
-                    onClick={() => setCellInputAmount('2500')}
-                    className="p-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 rounded-xl font-bold font-mono transition-colors cursor-pointer"
-                  >
-                    ২৫০০
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCellInputAmount('3000')}
-                    className="p-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 rounded-xl font-bold font-mono transition-colors cursor-pointer"
-                  >
-                    ৩০০০
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCellInputAmount('5000')}
-                    className="p-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 rounded-xl font-bold font-mono transition-colors cursor-pointer"
-                  >
-                    ৫০০০
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCellInputAmount('0')}
-                    className="p-2 bg-red-100 hover:bg-red-200 text-red-900 rounded-xl font-bold transition-colors cursor-pointer"
-                  >
-                    ০ (বাকি)
-                  </button>
+                  {editingCell.monthKey === 'downpayment' ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setCellInputAmount('1000')}
+                        className="p-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 rounded-xl font-bold font-mono transition-colors cursor-pointer"
+                      >
+                        ১০০০
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCellInputAmount('2000')}
+                        className="p-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 rounded-xl font-bold font-mono transition-colors cursor-pointer"
+                      >
+                        ২০০০
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCellInputAmount('2500')}
+                        className="p-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 rounded-xl font-bold font-mono transition-colors cursor-pointer"
+                      >
+                        ২৫০০
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCellInputAmount('0')}
+                        className="p-2 bg-stone-100 hover:bg-stone-200 text-stone-900 rounded-xl font-bold transition-colors cursor-pointer"
+                      >
+                        ০
+                      </button>
+                    </>
+                  ) : editingCell.monthKey === 'fine' ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setCellInputAmount('50')}
+                        className="p-2 bg-red-100 hover:bg-red-200 text-red-900 rounded-xl font-bold font-mono transition-colors cursor-pointer"
+                      >
+                        ৫০
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCellInputAmount('100')}
+                        className="p-2 bg-red-100 hover:bg-red-200 text-red-900 rounded-xl font-bold font-mono transition-colors cursor-pointer"
+                      >
+                        ১০০
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCellInputAmount('200')}
+                        className="p-2 bg-red-100 hover:bg-red-200 text-red-900 rounded-xl font-bold font-mono transition-colors cursor-pointer"
+                      >
+                        ২০০
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCellInputAmount('0')}
+                        className="p-2 bg-stone-100 hover:bg-stone-200 text-stone-900 rounded-xl font-bold transition-colors cursor-pointer"
+                      >
+                        ০ (মাফ)
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setCellInputAmount('2500')}
+                        className="p-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 rounded-xl font-bold font-mono transition-colors cursor-pointer"
+                      >
+                        ২৫০০
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCellInputAmount('3000')}
+                        className="p-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 rounded-xl font-bold font-mono transition-colors cursor-pointer"
+                      >
+                        ৩০০০
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCellInputAmount('5000')}
+                        className="p-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 rounded-xl font-bold font-mono transition-colors cursor-pointer"
+                      >
+                        ৫০০০
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCellInputAmount('0')}
+                        className="p-2 bg-red-100 hover:bg-red-200 text-red-900 rounded-xl font-bold transition-colors cursor-pointer"
+                      >
+                        ০ (বাকি)
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -972,7 +1179,9 @@ export const YearChartPage: React.FC<YearChartPageProps> = ({
               <div>
                 <h3 className="text-lg font-bold text-stone-900 flex items-center gap-2">
                   <Calendar className="w-5 h-5 text-emerald-700" />
-                  {bulkMonthModal.monthName} {toBn(bulkMonthModal.year)}: সবার চাঁদা একবারে এডিট
+                  {bulkMonthModal.monthKey === 'downpayment' || bulkMonthModal.monthKey === 'fine'
+                    ? `${bulkMonthModal.monthName}: সকল সদস্যের হিসাব একবারে এডিট`
+                    : `${bulkMonthModal.monthName} ${toBn(bulkMonthModal.year)}: সবার চাঁদা একবারে এডিট`}
                 </h3>
                 <p className="text-xs text-stone-500 mt-0.5">
                   সকল সদস্যের টাকার পরিমাণ পরিবর্তন করে এক ক্লিকে সেভ করুন
@@ -988,33 +1197,109 @@ export const YearChartPage: React.FC<YearChartPageProps> = ({
             </div>
 
             {/* Quick Actions Header */}
-            <div className="bg-emerald-50 px-6 py-2.5 border-b border-emerald-200 flex items-center justify-between">
+            <div className="bg-emerald-50 px-6 py-2.5 border-b border-emerald-200 flex flex-wrap items-center justify-between gap-2">
               <span className="text-xs font-semibold text-emerald-900">
                 দ্রুত সেট করুন:
               </span>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const updated: Record<string, number | null> = {};
-                    data.members.forEach(m => updated[m.id] = 2500);
-                    setBulkAmounts(updated);
-                  }}
-                  className="px-2.5 py-1 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg text-xs font-bold cursor-pointer"
-                >
-                  সবাইকে ২৫০০ করুন
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const updated: Record<string, number | null> = {};
-                    data.members.forEach(m => updated[m.id] = 0);
-                    setBulkAmounts(updated);
-                  }}
-                  className="px-2.5 py-1 bg-red-100 hover:bg-red-200 text-red-900 rounded-lg text-xs font-bold cursor-pointer"
-                >
-                  সবাইকে বাকি (০) করুন
-                </button>
+              <div className="flex flex-wrap items-center gap-2">
+                {bulkMonthModal.monthKey === 'downpayment' ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updated: Record<string, number | null> = {};
+                        data.members.forEach(m => updated[m.id] = 1000);
+                        setBulkAmounts(updated);
+                      }}
+                      className="px-2.5 py-1 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg text-xs font-bold cursor-pointer"
+                    >
+                      সবাইকে ১০০০ করুন
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updated: Record<string, number | null> = {};
+                        data.members.forEach(m => updated[m.id] = 2500);
+                        setBulkAmounts(updated);
+                      }}
+                      className="px-2.5 py-1 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg text-xs font-bold cursor-pointer"
+                    >
+                      সবাইকে ২৫০০ করুন
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updated: Record<string, number | null> = {};
+                        data.members.forEach(m => updated[m.id] = 0);
+                        setBulkAmounts(updated);
+                      }}
+                      className="px-2.5 py-1 bg-stone-200 hover:bg-stone-300 text-stone-900 rounded-lg text-xs font-bold cursor-pointer"
+                    >
+                      সবাইকে ০ করুন
+                    </button>
+                  </>
+                ) : bulkMonthModal.monthKey === 'fine' ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updated: Record<string, number | null> = {};
+                        data.members.forEach(m => updated[m.id] = 50);
+                        setBulkAmounts(updated);
+                      }}
+                      className="px-2.5 py-1 bg-red-700 hover:bg-red-800 text-white rounded-lg text-xs font-bold cursor-pointer"
+                    >
+                      সবাইকে ৫০ করুন
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updated: Record<string, number | null> = {};
+                        data.members.forEach(m => updated[m.id] = 100);
+                        setBulkAmounts(updated);
+                      }}
+                      className="px-2.5 py-1 bg-red-700 hover:bg-red-800 text-white rounded-lg text-xs font-bold cursor-pointer"
+                    >
+                      সবাইকে ১০০ করুন
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updated: Record<string, number | null> = {};
+                        data.members.forEach(m => updated[m.id] = 0);
+                        setBulkAmounts(updated);
+                      }}
+                      className="px-2.5 py-1 bg-stone-200 hover:bg-stone-300 text-stone-900 rounded-lg text-xs font-bold cursor-pointer"
+                    >
+                      সবাইকে ০ (মাফ) করুন
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updated: Record<string, number | null> = {};
+                        data.members.forEach(m => updated[m.id] = 2500);
+                        setBulkAmounts(updated);
+                      }}
+                      className="px-2.5 py-1 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg text-xs font-bold cursor-pointer"
+                    >
+                      সবাইকে ২৫০০ করুন
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updated: Record<string, number | null> = {};
+                        data.members.forEach(m => updated[m.id] = 0);
+                        setBulkAmounts(updated);
+                      }}
+                      className="px-2.5 py-1 bg-red-100 hover:bg-red-200 text-red-900 rounded-lg text-xs font-bold cursor-pointer"
+                    >
+                      সবাইকে বাকি (০) করুন
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 

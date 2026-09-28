@@ -41,6 +41,23 @@ interface MemberListProps {
   onDataUpdated?: (newData: SocietyData) => void;
 }
 
+export const calculateMemberAllTotal = (m: Member): number => {
+  let total = (m.downPayment || 0) + (m.fine || 0);
+  if (m.payments2025) {
+    Object.values(m.payments2025).forEach((val) => {
+      if (val && val > 0) total += val;
+    });
+  } else {
+    total += (m.august || 0) + (m.september || 0) + (m.october || 0);
+  }
+  if (m.payments2026) {
+    Object.values(m.payments2026).forEach((val) => {
+      if (val && val > 0) total += val;
+    });
+  }
+  return total;
+};
+
 export const MemberList: React.FC<MemberListProps> = ({
   members,
   currentUser,
@@ -185,8 +202,8 @@ export const MemberList: React.FC<MemberListProps> = ({
       (m.role && m.role.toLowerCase().includes(rawTerm))
     );
   }).sort((a, b) => {
-    const totalA = (a.august || 0) + (a.september || 0) + (a.october || 0) + (a.downPayment || 0);
-    const totalB = (b.august || 0) + (b.september || 0) + (b.october || 0) + (b.downPayment || 0);
+    const totalA = calculateMemberAllTotal(a);
+    const totalB = calculateMemberAllTotal(b);
 
     if (sortBy === 'roll_asc') return a.rollNo - b.rollNo;
     if (sortBy === 'id_asc') return a.id.localeCompare(b.id);
@@ -618,7 +635,7 @@ export const MemberList: React.FC<MemberListProps> = ({
           {filteredMembers.map((member) => {
             const isAugPaid = member.august !== null && member.august > 0;
             const isSepPaid = member.september !== null && member.september > 0;
-            const totalDeposit = (member.august || 0) + (member.september || 0) + (member.october || 0) + (member.downPayment || 0);
+            const totalDeposit = calculateMemberAllTotal(member);
 
             return (
               <div
@@ -835,7 +852,7 @@ export const MemberList: React.FC<MemberListProps> = ({
               </thead>
               <tbody className="divide-y divide-stone-100">
                 {filteredMembers.map((m) => {
-                  const totalDeposit = (m.august || 0) + (m.september || 0) + (m.october || 0) + (m.downPayment || 0);
+                  const totalDeposit = calculateMemberAllTotal(m);
                   const isAugPaid = m.august !== null && m.august > 0;
                   const isSepPaid = m.september !== null && m.september > 0;
 
@@ -997,7 +1014,7 @@ export const MemberList: React.FC<MemberListProps> = ({
                 <div>
                   <span className="text-stone-500 text-[11px] block">মোট জমা:</span>
                   <strong className="text-emerald-800 font-bold text-base">
-                    {formatCurrency((selectedMember.august || 0) + (selectedMember.september || 0) + (selectedMember.october || 0) + (selectedMember.downPayment || 0))}
+                    {formatCurrency(calculateMemberAllTotal(selectedMember))}
                   </strong>
                 </div>
               </div>

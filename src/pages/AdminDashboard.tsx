@@ -469,8 +469,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     e.preventDefault();
     if (!editingMember) return;
 
+    const syncedPayments2025 = {
+      ...(editingMember.payments2025 || {}),
+      '08': editingMember.august,
+      '09': editingMember.september,
+      '10': editingMember.october
+    };
+
+    const finalMember: Member = {
+      ...editingMember,
+      payments2025: syncedPayments2025
+    };
+
     const updatedMembers = data.members.map((m) =>
-      m.id === editingMember.id ? editingMember : m
+      m.id === finalMember.id ? finalMember : m
     );
 
     const updated: SocietyData = {

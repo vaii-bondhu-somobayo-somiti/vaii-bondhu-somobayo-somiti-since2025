@@ -96,7 +96,7 @@ export function getStoredData(): SocietyData {
   }
 }
 
-export function saveStoredData(data: SocietyData): void {
+export async function saveStoredDataAsync(data: SocietyData): Promise<{ success: boolean; error?: string }> {
   try {
     const updated = {
       ...data,
@@ -104,16 +104,21 @@ export function saveStoredData(data: SocietyData): void {
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     localStorage.setItem(LAST_SAVED_KEY, new Date().toLocaleTimeString('bn-BD'));
-    // Dispatch a custom window event so all open views sync seamlessly
     window.dispatchEvent(new CustomEvent('society_data_updated', { detail: updated }));
 
-    // Real-time Cloud Firestore synchronization across devices
-    saveSocietyCloudData(updated).catch((cloudErr) => {
-      console.warn('Firebase Cloud save notice:', cloudErr);
-    });
+    const res = await saveSocietyCloudData(updated);
+    return res;
   } catch (err) {
-    console.error('Error saving data to localStorage:', err);
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('Error saving data:', msg);
+    return { success: false, error: msg };
   }
+}
+
+export function saveStoredData(data: SocietyData): void {
+  saveStoredDataAsync(data).catch((err) => {
+    console.warn('saveStoredData async error notice:', err);
+  });
 }
 
 export function getLastSavedTime(): string {

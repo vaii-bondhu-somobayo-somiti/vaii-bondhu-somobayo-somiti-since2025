@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { SocietyData, Member, ExpenseItem, SocietyRule, CommitteeMember, Notice } from '../types';
 import { 
   saveStoredData, 
+  saveStoredDataAsync,
   exportDataAsJSON, 
   importDataFromJSON, 
   resetToDefaults, 
@@ -9,7 +10,7 @@ import {
   toBengaliNumber,
   getLastSavedTime
 } from '../utils/storage';
-import { saveSocietyCloudData } from '../firebase';
+import { saveSocietyCloudData, fetchSocietyCloudData } from '../firebase';
 import { compressAndReadFile } from '../utils/imageHelper';
 import { SOCIETY_RULES, COMMITTEE_MEMBERS } from '../data/initialData';
 import { 
@@ -69,6 +70,41 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const showNotification = (type: 'success' | 'error', text: string) => {
     setNotification({ type, text });
     setTimeout(() => setNotification(null), 4000);
+  };
+
+  // Cloud Sync Status & Actions
+  const [isSyncingCloud, setIsSyncingCloud] = useState(false);
+
+  const handleForceUploadToCloud = async () => {
+    setIsSyncingCloud(true);
+    try {
+      const res = await saveStoredDataAsync(data);
+      if (res.success) {
+        showNotification('success', 'সমিতির যাবতীয় ডাটা গুগল ফায়ারবেস ক্লাউডে সফলভাবে সংরক্ষিত হয়েছে!');
+      } else {
+        showNotification('error', `ক্লাউডে সংরক্ষণে সমস্যা হয়েছে: ${res.error || 'Unknown error'}`);
+      }
+    } finally {
+      setIsSyncingCloud(false);
+    }
+  };
+
+  const handleForceDownloadFromCloud = async () => {
+    setIsSyncingCloud(true);
+    try {
+      const cloudData = await fetchSocietyCloudData();
+      if (cloudData) {
+        saveStoredData(cloudData);
+        onDataUpdated(cloudData);
+        showNotification('success', 'গুগল ফায়ারবেস ক্লাউড থেকে সর্বশেষ ডাটা সফলভাবে ডাউনলোড ও আপডেট হয়েছে!');
+      } else {
+        showNotification('error', 'ক্লাউডে কোনো সংরক্ষিত ডাটা পাওয়া যায়নি!');
+      }
+    } catch (err: any) {
+      showNotification('error', `ক্লাউড ডাটা আনতে সমস্যা হয়েছে: ${err.message || 'Error'}`);
+    } finally {
+      setIsSyncingCloud(false);
+    }
   };
 
   // Admin Security Password State
@@ -629,14 +665,36 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <h1 className="text-2xl sm:text-4xl font-black text-white mt-2">
             সমিতি সেন্ট্রাল ম্যানেজমেন্ট
           </h1>
-          <p className="text-xs sm:text-sm text-stone-300 mt-1 flex items-center gap-2">
-            <span>অটো সেভ সক্রিয়</span>
+          <p className="text-xs sm:text-sm text-stone-300 mt-1 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 text-emerald-300 font-semibold bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-500/30 text-xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> ক্লাউড ডাটাবেস সক্রিয়
+            </span>
             <span>•</span>
-            <span className="font-mono text-emerald-300">সর্বশেষ আপডেট: {getLastSavedTime()}</span>
+            <span className="font-mono text-stone-200">সর্বশেষ আপডেট: {getLastSavedTime()}</span>
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            onClick={handleForceUploadToCloud}
+            disabled={isSyncingCloud}
+            className="px-4 py-2.5 bg-sky-700 hover:bg-sky-600 disabled:opacity-60 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer border border-sky-500/40"
+            title="সমিতির সমস্ত হিসাব গুগল ক্লাউড ডাটাবেসে সেভ করুন"
+          >
+            <Cloud className={`w-4 h-4 text-sky-200 ${isSyncingCloud ? 'animate-spin' : ''}`} />
+            {isSyncingCloud ? 'ক্লাউড সিঙ্ক হচ্ছে...' : 'ক্লাউডে সেভ'}
+          </button>
+
+          <button
+            onClick={handleForceDownloadFromCloud}
+            disabled={isSyncingCloud}
+            className="px-4 py-2.5 bg-stone-800 hover:bg-stone-700 disabled:opacity-60 text-stone-200 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer border border-stone-600"
+            title="গুগল ফায়ারবেস ক্লাউড থেকে সর্বশেষ ডাটা ডাউনলোড করুন"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-stone-300 ${isSyncingCloud ? 'animate-spin' : ''}`} />
+            ক্লাউড থেকে রিলোড
+          </button>
+
           <button
             onClick={() => window.print()}
             className="px-4 py-2.5 bg-emerald-800 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
@@ -2520,19 +2578,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   সকল সদস্যের হিসাব, চাঁদা ও খরচের ডাটা গুগল ক্লাউডে রিয়েল-টাইম সিঙ্ক হচ্ছে।
                 </p>
               </div>
-              <button
-                onClick={async () => {
-                  try {
-                    await saveSocietyCloudData(data);
-                    showNotification('success', 'সকল ডাটা সফলভাবে ক্লাউড ফায়ারস্টোরে সিঙ্ক হয়েছে!');
-                  } catch (e: any) {
-                    showNotification('error', 'ক্লাউড সিঙ্ক করতে সমস্যা হয়েছে: ' + (e.message || ''));
-                  }
-                }}
-                className="w-full py-2.5 bg-sky-800 hover:bg-sky-900 text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <Cloud className="w-4 h-4 text-amber-300" /> এখনই ক্লাউডে সিঙ্ক করুন
-              </button>
+              <div className="space-y-2 pt-2">
+                <button
+                  onClick={handleForceUploadToCloud}
+                  disabled={isSyncingCloud}
+                  className="w-full py-2.5 bg-sky-800 hover:bg-sky-900 text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                >
+                  <Cloud className={`w-4 h-4 text-amber-300 ${isSyncingCloud ? 'animate-spin' : ''}`} /> 
+                  {isSyncingCloud ? 'সিঙ্ক হচ্ছে...' : 'এখনই ক্লাউডে আপলোড/সিঙ্ক করুন'}
+                </button>
+                <button
+                  onClick={handleForceDownloadFromCloud}
+                  disabled={isSyncingCloud}
+                  className="w-full py-2 bg-white hover:bg-sky-100 text-sky-900 border border-sky-300 text-xs font-bold rounded-xl transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 text-sky-700 ${isSyncingCloud ? 'animate-spin' : ''}`} /> 
+                  ক্লাউড থেকে ডাটা রিফ্রেশ করুন
+                </button>
+              </div>
             </div>
 
             {/* 5. Change Admin Password Card */}

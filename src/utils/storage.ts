@@ -9,7 +9,6 @@ export function getStoredData(): SocietyData {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) {
-      saveStoredData(INITIAL_SOCIETY_DATA);
       return INITIAL_SOCIETY_DATA;
     }
     const parsed = JSON.parse(raw);

@@ -56,21 +56,11 @@ export default function App() {
     // Real-time Cloud Firestore listener
     const unsubscribeCloud = subscribeToSocietyCloudData(
       (cloudData) => {
-        const local = getStoredData();
-        const localTime = local.lastUpdated ? new Date(local.lastUpdated).getTime() : 0;
-        const cloudTime = cloudData.lastUpdated ? new Date(cloudData.lastUpdated).getTime() : 0;
-
-        // If cloud is equal or newer, or local has no timestamp, accept cloud
-        if (cloudTime >= localTime || !local.lastUpdated) {
-          setData(cloudData);
-          try {
-            localStorage.setItem('bhai_bondhu_somobay_data_v1', JSON.stringify(cloudData));
-          } catch {
-            // ignore cache errors
-          }
-        } else {
-          // If local has newer edits (user just made changes), push local up to cloud
-          saveSocietyCloudData(local);
+        setData(cloudData);
+        try {
+          localStorage.setItem('bhai_bondhu_somobay_data_v1', JSON.stringify(cloudData));
+        } catch {
+          // ignore cache errors
         }
       },
       (error) => {

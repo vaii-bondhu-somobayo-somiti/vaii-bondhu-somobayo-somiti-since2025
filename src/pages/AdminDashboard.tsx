@@ -156,7 +156,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // 1. BANK & MOBILE BANKING STATE
   // -------------------------------------------------------------
   const [bankForm, setBankForm] = useState({
-    bankName: data.bankAccount?.bankName || 'পূবালী ব্যাংক পিএলসি',
+    bankName: data.bankAccount?.bankName || 'জনতা ব্যাংক লিমিটেড',
     accountName: data.bankAccount?.accountName || 'ভাই-বন্ধু সমবায় সমিতি',
     accountNumber: data.bankAccount?.accountNumber || '3489101089241',
     branch: data.bankAccount?.branch || 'ছেঙ্গারচর বাজার শাখা, মতলব উত্তর, চাঁদপুর',
@@ -946,7 +946,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <div>
                 <h3 className="text-xl font-bold text-stone-900 flex items-center gap-2">
                   <Landmark className="w-5 h-5 text-emerald-700" />
-                  পূবালী ব্যাংক একাউন্ট তথ্য পরিবর্তন (Bank Account Details)
+                  ব্যাংক একাউন্ট তথ্য পরিবর্তন (Bank Account Details)
                 </h3>
                 <p className="text-xs text-stone-500 mt-0.5">
                   এখানে যা পরিবর্তন করবেন তা সরাসরি পেমেন্ট পেজ, হোম পেজ ও ব্যাংক ভাউচারে দৃশ্যমান হবে
@@ -968,7 +968,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     type="text"
                     value={bankForm.bankName}
                     onChange={(e) => setBankForm({ ...bankForm, bankName: e.target.value })}
-                    placeholder="যেমন: পূবালী ব্যাংক পিএলসি"
+                    placeholder="যেমন: জনতা ব্যাংক লিমিটেড"
                     className="w-full p-2.5 rounded-xl border border-stone-300 focus:border-emerald-600 bg-stone-50/50 text-sm"
                     required
                   />
@@ -1856,7 +1856,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               ব্যাংক ব্যালেন্স ও ক্যাশ ইন হ্যান্ড আপডেট
             </h3>
             <p className="text-xs text-stone-500">
-              পূবালী ব্যাংক পিএলসি অ্যাকাউন্টে বাস্তব জমার স্থিতি অনুসারে সংখ্যাটি আপডেট করুন
+              {data.bankAccount?.bankName || 'জনতা ব্যাংক লিমিটেড'} অ্যাকাউন্টে বাস্তব জমার স্থিতি অনুসারে সংখ্যাটি আপডেট করুন
             </p>
           </div>
 
@@ -1877,7 +1877,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <form onSubmit={handleUpdateBalance} className="space-y-4">
               <div>
                 <label className="block font-bold text-stone-800 text-xs sm:text-sm mb-1">
-                  পূবালী ব্যাংক রিজার্ভ ব্যালেন্স (টাকা) *
+                  {data.bankAccount?.bankName || 'জনতা ব্যাংক লিমিটেড'} রিজার্ভ ব্যালেন্স (টাকা) *
                 </label>
                 <input
                   type="number"

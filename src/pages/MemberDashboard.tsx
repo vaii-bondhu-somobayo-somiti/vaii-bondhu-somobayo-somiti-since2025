@@ -498,22 +498,37 @@ export const MemberDashboard: React.FC<MemberDashboardProps> = ({
                 <td className="p-2.5 text-right font-mono text-sky-900">উপমোট: {formatCurrency(t2026)}</td>
               </tr>
 
-              {['01', '02', '03'].map(k => {
-                const names: Record<string, string> = { '01': 'জানুয়ারি', '02': 'ফেব্রুয়ারি', '03': 'মার্চ' };
+              {['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'].map(k => {
+                const names: Record<string, string> = { 
+                  '01': 'জানুয়ারি', '02': 'ফেব্রুয়ারি', '03': 'মার্চ', '04': 'এপ্রিল',
+                  '05': 'মে', '06': 'জুন', '07': 'জুলাই', '08': 'আগস্ট',
+                  '09': 'সেপ্টেম্বর', '10': 'অক্টোবর', '11': 'নভেম্বর', '12': 'ডিসেম্বর'
+                };
                 const val = member.payments2026?.[k];
                 const paid = val !== null && val !== undefined && val > 0;
+                const isRunning = k === '09';
+                const isPast = Number(k) < 9;
                 return (
-                  <tr key={k}>
-                    <td className="p-3 font-medium pl-6">{names[k]} ২০২৬ মাসিক চাঁদা</td>
+                  <tr key={k} className={isRunning ? 'bg-amber-50/70 font-semibold' : ''}>
+                    <td className="p-3 font-medium pl-6">
+                      <span className="flex items-center gap-1.5">
+                        {isRunning && <span className="w-2 h-2 rounded-full bg-emerald-600 inline-block" />}
+                        <span>{names[k]} ২০২৬ মাসিক চাঁদা {isRunning && '(চলতি মাস)'}</span>
+                      </span>
+                    </td>
                     <td className="p-3 text-center font-mono">২,৫০০ ৳</td>
                     <td className="p-3 text-center font-mono font-bold text-sky-800">
-                      {paid ? `${val} ৳` : '—'}
+                      {paid ? `${toBengaliNumber(val)} ৳` : '—'}
                     </td>
                     <td className="p-3 text-center">
                       {paid ? (
                         <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-xs font-bold">পরিশোধিত</span>
-                      ) : (
+                      ) : isRunning ? (
+                        <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-bold border border-red-300">চলতি মাস বকেয়া</span>
+                      ) : isPast ? (
                         <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-bold">বকেয়া</span>
+                      ) : (
+                        <span className="bg-stone-100 text-stone-600 px-2 py-0.5 rounded text-xs font-medium">অপেক্ষমান</span>
                       )}
                     </td>
                     <td className="p-3 text-right font-mono font-bold">

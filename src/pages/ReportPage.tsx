@@ -63,7 +63,7 @@ export const ReportPage: React.FC<ReportPageProps> = ({
             আর্থিক প্রতিবেদন ও ব্যালেন্স রিপোর্ট
           </h1>
           <p className="text-xs sm:text-sm text-stone-600 mt-1">
-            ভাই-বন্ধু সমবায় সমিতির মোট আদায়, পূবালী ব্যাংক ব্যালেন্স এবং খরচের স্বচ্ছ হিসাব
+            ভাই-বন্ধু সমবায় সমিতির মোট আদায়, {data.bankAccount?.bankName || 'জনতা ব্যাংক লিমিটেড'} ব্যালেন্স এবং খরচের স্বচ্ছ হিসাব
           </p>
         </div>
 
@@ -110,7 +110,7 @@ export const ReportPage: React.FC<ReportPageProps> = ({
             {formatCurrency(currentBankBalance)}
           </h2>
           <p className="text-xs text-emerald-200 mt-2">
-            পূবালী ব্যাংক (মতলব উত্তর শাখা)
+            {data.bankAccount?.bankName || 'জনতা ব্যাংক লিমিটেড'} ({data.bankAccount?.branch || 'মতলব উত্তর শাখা'})
           </p>
         </div>
 
@@ -278,7 +278,7 @@ export const ReportPage: React.FC<ReportPageProps> = ({
             <tfoot>
               <tr className="bg-emerald-950 text-white font-extrabold text-sm sm:text-base">
                 <td colSpan={4} className="p-3.5 text-right">
-                  পূবালী ব্যাংক মোট ব্যালেন্স ও রিজার্ভ ফান্ড:
+                  {data.bankAccount?.bankName || 'জনতা ব্যাংক লিমিটেড'} মোট ব্যালেন্স ও রিজার্ভ ফান্ড:
                 </td>
                 <td className="p-3.5 text-right font-mono text-amber-300">
                   {formatCurrency(currentBankBalance)}

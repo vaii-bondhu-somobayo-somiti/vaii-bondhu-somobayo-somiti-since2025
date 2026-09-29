@@ -154,7 +154,7 @@ export const HomePage: React.FC<HomePageProps> = ({ data, onNavigate, onOpenDocs
                     তহবিল স্থিতি
                   </span>
                   <span className="bg-amber-400/20 text-amber-300 text-[10px] font-bold px-1.5 py-0.5 rounded border border-amber-400/30">
-                    পূবালী ব্যাংক
+                    {data.bankAccount?.bankName || 'জনতা ব্যাংক লিমিটেড'}
                   </span>
                 </div>
                 <h3 className="text-3xl sm:text-4xl font-black text-white">

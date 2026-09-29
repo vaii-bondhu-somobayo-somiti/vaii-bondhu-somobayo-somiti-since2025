@@ -41,9 +41,11 @@ export function getStoredData(): SocietyData {
       const sepVal = payments2025['09'] !== undefined ? payments2025['09'] : m.september;
       const octVal = payments2025['10'] !== undefined ? payments2025['10'] : m.october;
 
-      // Initialize payments2026
+      // Initialize payments2026 with all 12 months
       const payments2026: Record<string, number | null> = {
-        '01': null, '02': null, '03': null,
+        '01': null, '02': null, '03': null, '04': null,
+        '05': null, '06': null, '07': null, '08': null,
+        '09': null, '10': null, '11': null, '12': null,
         ...(m.payments2026 || {})
       };
 

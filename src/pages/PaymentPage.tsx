@@ -76,16 +76,46 @@ export const PaymentPage: React.FC<PaymentPageProps> = ({ data, onPaymentSubmitt
     // Update member's record in state
     const updatedMembers = data.members.map((m) => {
       if (m.id === selectedMemberId) {
-        if (month.includes('সেপ্টেম্বর')) {
-          return { ...m, september: Number(amount) };
+        const amt = Number(amount);
+        if (month.includes('২০২৬')) {
+          const map2026: Record<string, string> = {
+            'জানুয়ারি': '01', 'ফেব্রুয়ারি': '02', 'মার্চ': '03', 'এপ্রিল': '04',
+            'মে': '05', 'জুন': '06', 'জুলাই': '07', 'আগস্ট': '08',
+            'সেপ্টেম্বর': '09', 'অক্টোবর': '10', 'নভেম্বর': '11', 'ডিসেম্বর': '12'
+          };
+          let k = '09';
+          for (const [name, key] of Object.entries(map2026)) {
+            if (month.includes(name)) { k = key; break; }
+          }
+          return {
+            ...m,
+            payments2026: {
+              ...(m.payments2026 || {}),
+              [k]: amt
+            }
+          };
+        } else if (month.includes('সেপ্টেম্বর')) {
+          return { 
+            ...m, 
+            september: amt,
+            payments2025: { ...(m.payments2025 || {}), '09': amt }
+          };
         } else if (month.includes('আগস্ট')) {
-          return { ...m, august: Number(amount) };
+          return { 
+            ...m, 
+            august: amt,
+            payments2025: { ...(m.payments2025 || {}), '08': amt }
+          };
         } else if (month.includes('অক্টোবর')) {
-          return { ...m, october: Number(amount) };
+          return { 
+            ...m, 
+            october: amt,
+            payments2025: { ...(m.payments2025 || {}), '10': amt }
+          };
         } else if (paymentType === 'downpayment') {
-          return { ...m, downPayment: (m.downPayment || 0) + Number(amount) };
+          return { ...m, downPayment: (m.downPayment || 0) + amt };
         } else if (paymentType === 'fine') {
-          return { ...m, fine: (m.fine || 0) + Number(amount) };
+          return { ...m, fine: (m.fine || 0) + amt };
         }
       }
       return m;

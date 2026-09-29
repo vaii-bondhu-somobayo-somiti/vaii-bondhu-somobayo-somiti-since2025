@@ -533,7 +533,7 @@ export const INITIAL_SOCIETY_DATA: SocietyData = {
   establishedYear: "২০২৫",
   address: "মধ্য মুক্তির কান্দি, পাঠান বাজার, মতলব উত্তর, চাঁদপুর | ২০২৫",
   bankAccount: {
-    bankName: "পূবালী ব্যাংক পিএলসি",
+    bankName: "জনতা ব্যাংক লিমিটেড",
     accountName: "ভাই-বন্ধু সমবায় সমিতি",
     accountNumber: "3489101089241",
     branch: "ছেঙ্গারচর বাজার শাখা, মতলব উত্তর, চাঁদপুর",

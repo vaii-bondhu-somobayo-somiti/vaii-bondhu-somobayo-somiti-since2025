@@ -22,6 +22,7 @@ import {
   Calendar,
   TrendingUp,
   X,
+  ArrowLeft,
   RotateCcw,
   User,
   Hash,
@@ -47,13 +48,18 @@ export const calculateMemberYearTotal = (m: Member, targetYear: number): number 
     const dp2 = m.downPayment2025_2 || 0;
     const fine = m.fine2025 !== undefined ? m.fine2025 : (m.fine || 0);
     let months = 0;
-    if (m.payments2025) {
-      Object.values(m.payments2025).forEach((val) => {
-        if (val && val > 0) months += val;
-      });
-    } else {
-      months = (m.august || 0) + (m.september || 0) + (m.october || 0);
-    }
+    const monthKeys = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
+    monthKeys.forEach((k) => {
+      let val = m.payments2025?.[k];
+      if (val === undefined || val === null) {
+        if (k === '08') val = m.august;
+        else if (k === '09') val = m.september;
+        else if (k === '10') val = m.october;
+      }
+      if (val && Number(val) > 0) {
+        months += Number(val);
+      }
+    });
     return dp1 + dp2 + fine + months;
   } else {
     const dp1 = m.downPayment2026_1 || 0;
@@ -62,7 +68,7 @@ export const calculateMemberYearTotal = (m: Member, targetYear: number): number 
     let months = 0;
     if (m.payments2026) {
       Object.values(m.payments2026).forEach((val) => {
-        if (val && val > 0) months += val;
+        if (val && Number(val) > 0) months += Number(val);
       });
     }
     return dp1 + dp2 + fine + months;
@@ -91,6 +97,17 @@ export const MemberList: React.FC<MemberListProps> = ({
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+
+  // Close modal on ESC key
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && selectedMember) {
+        setSelectedMember(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedMember]);
 
   // Profile picture upload states
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -648,8 +665,11 @@ export const MemberList: React.FC<MemberListProps> = ({
       {filteredMembers.length > 0 && (viewMode === 'cards' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
           {filteredMembers.map((member) => {
+            const runningSep = member.payments2025?.['09'] !== undefined && member.payments2025?.['09'] !== null 
+              ? member.payments2025['09'] 
+              : member.september;
             const isAugPaid = member.august !== null && member.august > 0;
-            const isSepPaid = member.september !== null && member.september > 0;
+            const isSepPaid = runningSep !== null && Number(runningSep) > 0;
             const totalDeposit = calculateMemberAllTotal(member);
 
             return (
@@ -760,57 +780,31 @@ export const MemberList: React.FC<MemberListProps> = ({
                     </div>
                   </div>
 
-                  {/* Monthly Status Grid: August & September */}
-                  <div className="grid grid-cols-2 gap-2 pt-1">
-                    
-                    {/* August Status */}
-                    <div className={`p-2 rounded-xl border text-center ${
-                      isAugPaid 
-                        ? 'bg-emerald-50/70 border-emerald-200 text-emerald-950' 
-                        : 'bg-red-50/70 border-red-200 text-red-950'
-                    }`}>
-                      <span className="text-[10px] uppercase font-bold block text-stone-500">
-                        আগস্ট
-                      </span>
-                      <div className="flex items-center justify-center gap-1 mt-0.5">
-                        {isAugPaid ? (
-                          <>
-                            <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
-                            <span className="text-xs font-black text-emerald-700">Paid ({toBengaliNumber(member.august)})</span>
-                          </>
-                        ) : (
-                          <>
-                            <XCircle className="w-3 h-3 text-red-600 shrink-0" />
-                            <span className="text-xs font-black text-red-600">Baki</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* September Status */}
-                    <div className={`p-2 rounded-xl border text-center ${
+                  {/* Single Running Month Status: চলতি মাস (সেপ্টেম্বর ২০২৫) */}
+                  <div className="pt-2">
+                    <div className={`p-2.5 rounded-2xl border text-center transition-all ${
                       isSepPaid 
-                        ? 'bg-emerald-50/70 border-emerald-200 text-emerald-950' 
-                        : 'bg-red-50/70 border-red-200 text-red-950'
+                        ? 'bg-emerald-50/90 border-emerald-300 text-emerald-950 shadow-2xs' 
+                        : 'bg-red-50/90 border-red-300 text-red-950 shadow-2xs'
                     }`}>
-                      <span className="text-[10px] uppercase font-bold block text-stone-500">
-                        সেপ্টেম্বর
-                      </span>
-                      <div className="flex items-center justify-center gap-1 mt-0.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-stone-600 flex items-center gap-1">
+                          <Calendar className="w-3.5 h-3.5 text-emerald-700" />
+                          চলতি মাস (সেপ্টেম্বর):
+                        </span>
                         {isSepPaid ? (
-                          <>
-                            <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
-                            <span className="text-xs font-black text-emerald-700">Paid ({toBengaliNumber(member.september)})</span>
-                          </>
+                          <span className="inline-flex items-center gap-1 text-xs font-black text-emerald-800 bg-emerald-100 border border-emerald-300 px-2.5 py-0.5 rounded-full">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            Paid ({toBengaliNumber(runningSep)} ৳)
+                          </span>
                         ) : (
-                          <>
-                            <XCircle className="w-3 h-3 text-red-600 shrink-0" />
-                            <span className="text-xs font-black text-red-600">Baki</span>
-                          </>
+                          <span className="inline-flex items-center gap-1 text-xs font-black text-red-800 bg-red-100 border border-red-300 px-2.5 py-0.5 rounded-full">
+                            <XCircle className="w-3.5 h-3.5 text-red-600 shrink-0" />
+                            Due (দেউ)
+                          </span>
                         )}
                       </div>
                     </div>
-
                   </div>
                 </div>
 
@@ -858,18 +852,20 @@ export const MemberList: React.FC<MemberListProps> = ({
                   <th className="py-3 px-3">মেম্বার আইডি</th>
                   <th className="py-3 px-3">সদস্যের নাম</th>
                   <th className="py-3 px-3">পদবী</th>
-                  <th className="py-3 px-3">মোবাইল নম্বর</th>
-                  <th className="py-3 px-3 text-center">আগস্ট Status</th>
-                  <th className="py-3 px-3 text-center">সেপ্টেম্বর Status</th>
+                  <th className="py-3 px-3 font-mono">মোবাইল নম্বর</th>
+                  <th className="py-3 px-3 text-center">চলতি মাস (সেপ্টেম্বর)</th>
                   <th className="py-3 px-3 text-right">মোট জমা</th>
                   <th className="py-3 px-3 text-center">অ্যাকশন</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100">
                 {filteredMembers.map((m) => {
-                  const totalDeposit = calculateMemberAllTotal(m);
+                  const runningSep = m.payments2025?.['09'] !== undefined && m.payments2025?.['09'] !== null 
+                    ? m.payments2025['09'] 
+                    : m.september;
                   const isAugPaid = m.august !== null && m.august > 0;
-                  const isSepPaid = m.september !== null && m.september > 0;
+                  const isSepPaid = runningSep !== null && Number(runningSep) > 0;
+                  const totalDeposit = calculateMemberAllTotal(m);
 
                   return (
                     <tr key={m.id} className="hover:bg-emerald-50/40 transition-colors">
@@ -909,24 +905,13 @@ export const MemberList: React.FC<MemberListProps> = ({
                         {m.phone}
                       </td>
                       <td className="py-3 px-3 text-center">
-                        {isAugPaid ? (
-                          <span className="inline-block px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-xs font-bold">
-                            Paid ({toBengaliNumber(m.august)})
-                          </span>
-                        ) : (
-                          <span className="inline-block px-2 py-0.5 rounded bg-red-100 text-red-700 text-xs font-bold">
-                            Baki
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-3 px-3 text-center">
                         {isSepPaid ? (
-                          <span className="inline-block px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-xs font-bold">
-                            Paid ({toBengaliNumber(m.september)})
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-300">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Paid ({toBengaliNumber(runningSep)} ৳)
                           </span>
                         ) : (
-                          <span className="inline-block px-2 py-0.5 rounded bg-red-100 text-red-700 text-xs font-bold">
-                            Baki
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-100 text-red-700 text-xs font-bold border border-red-300">
+                            <XCircle className="w-3.5 h-3.5 text-red-600" /> Due (দেউ)
                           </span>
                         )}
                       </td>
@@ -936,9 +921,9 @@ export const MemberList: React.FC<MemberListProps> = ({
                       <td className="py-3 px-3 text-center">
                         <button
                           onClick={() => setSelectedMember(m)}
-                          className="px-2.5 py-1 bg-stone-100 hover:bg-emerald-800 hover:text-white rounded-md text-xs font-semibold transition-colors"
+                          className="px-2.5 py-1.5 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1 shadow-2xs"
                         >
-                          রসিদ দেখুন
+                          <FileText className="w-3 h-3" /> বিবরণী
                         </button>
                       </td>
                     </tr>
@@ -952,65 +937,94 @@ export const MemberList: React.FC<MemberListProps> = ({
 
       {/* Individual Member Voucher / Receipt Modal */}
       {selectedMember && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border-2 border-emerald-800/30 animate-in zoom-in-95 space-y-4">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-xs overflow-y-auto"
+          onClick={() => setSelectedMember(null)}
+        >
+          <div 
+            className="bg-white rounded-3xl max-w-2xl w-full max-h-[92vh] flex flex-col shadow-2xl border-2 border-emerald-800/40 animate-in zoom-in-95 overflow-hidden my-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             
-            <div className="flex items-center justify-between pb-3 border-b border-stone-200">
-              <div className="flex items-center gap-3.5">
-                <div className="relative group/modalavatar shrink-0">
-                  <div className="w-14 h-14 rounded-2xl overflow-hidden bg-gradient-to-br from-emerald-800 to-emerald-950 border-2 border-emerald-600/60 shadow-md flex items-center justify-center text-white">
-                    {selectedMember.photoUrl ? (
-                      <img
-                        src={selectedMember.photoUrl}
-                        alt={selectedMember.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex flex-col items-center justify-center">
-                        <User className="w-7 h-7 text-emerald-200" />
-                        <span className="text-[9px] font-mono font-bold text-amber-300">
-                          #{toBengaliNumber(selectedMember.rollNo)}
-                        </span>
-                      </div>
-                    )}
+            {/* Top Navigation Bar: Back & Close Buttons */}
+            <div className="sticky top-0 z-20 bg-stone-900 text-white px-4 sm:px-6 py-3 flex items-center justify-between border-b border-stone-800 shadow-sm shrink-0">
+              <button
+                type="button"
+                onClick={() => setSelectedMember(null)}
+                className="inline-flex items-center gap-2 px-3.5 py-2 bg-emerald-800 hover:bg-emerald-700 active:bg-emerald-900 text-white rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-xs border border-emerald-600"
+              >
+                <ArrowLeft className="w-4 h-4 text-amber-300" />
+                <span>← তালিকায় ফিরে যান (Back)</span>
+              </button>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-stone-300 font-mono hidden sm:inline">
+                  {selectedMember.name} (#{toBengaliNumber(selectedMember.rollNo)})
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedMember(null)}
+                  className="px-3 py-1.5 bg-stone-800 hover:bg-red-700 hover:text-white text-stone-300 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold border border-stone-700"
+                  title="বন্ধ করুন"
+                >
+                  <X className="w-4 h-4 text-amber-300" />
+                  <span>বন্ধ করুন</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Scrollable Modal Content */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-stone-200">
+                <div className="flex items-center gap-3.5">
+                  <div className="relative group/modalavatar shrink-0">
+                    <div className="w-14 h-14 rounded-2xl overflow-hidden bg-gradient-to-br from-emerald-800 to-emerald-950 border-2 border-emerald-600/60 shadow-md flex items-center justify-center text-white">
+                      {selectedMember.photoUrl ? (
+                        <img
+                          src={selectedMember.photoUrl}
+                          alt={selectedMember.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex flex-col items-center justify-center">
+                          <User className="w-7 h-7 text-emerald-200" />
+                          <span className="text-[9px] font-mono font-bold text-amber-300">
+                            #{toBengaliNumber(selectedMember.rollNo)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => triggerUpload(selectedMember.id)}
+                      className="absolute -bottom-1 -right-1 p-1 bg-amber-400 hover:bg-amber-300 text-emerald-950 rounded-full shadow-md border-2 border-white cursor-pointer transition-transform hover:scale-110 active:scale-95"
+                      title={selectedMember.photoUrl ? "ছবি পরিবর্তন করুন" : "ছবি যোগ করুন"}
+                    >
+                      <Camera className="w-3 h-3" />
+                    </button>
                   </div>
-                  <button
-                    onClick={() => triggerUpload(selectedMember.id)}
-                    className="absolute -bottom-1 -right-1 p-1 bg-amber-400 hover:bg-amber-300 text-emerald-950 rounded-full shadow-md border-2 border-white cursor-pointer transition-transform hover:scale-110 active:scale-95"
-                    title={selectedMember.photoUrl ? "ছবি পরিবর্তন করুন" : "ছবি যোগ করুন"}
-                  >
-                    <Camera className="w-3 h-3" />
-                  </button>
-                </div>
-                <div>
-                  <h3 className="font-extrabold text-stone-900 text-lg flex items-center gap-2">
-                    {selectedMember.name}
-                    {selectedMember.photoUrl && (
-                      <button
-                        onClick={() => handleRemovePhoto(selectedMember.id)}
-                        className="text-stone-400 hover:text-red-600 p-0.5 rounded cursor-pointer"
-                        title="ছবি মুছে ফেলুন"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </h3>
-                  <p className="text-xs font-mono text-emerald-700">আইডি: {selectedMember.id} | রোল: {toBengaliNumber(selectedMember.rollNo)}</p>
-                  <button
-                    onClick={() => triggerUpload(selectedMember.id)}
-                    className="mt-1 text-[11px] font-bold text-emerald-800 hover:text-emerald-950 inline-flex items-center gap-1 cursor-pointer bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200 transition-colors"
-                  >
-                    <Camera className="w-3 h-3 text-amber-600" /> {selectedMember.photoUrl ? 'ছবি পরিবর্তন করুন' : 'প্রোফাইল ছবি যোগ করুন'}
-                  </button>
+                  <div>
+                    <h3 className="font-extrabold text-stone-900 text-lg flex items-center gap-2">
+                      {selectedMember.name}
+                      {selectedMember.photoUrl && (
+                        <button
+                          onClick={() => handleRemovePhoto(selectedMember.id)}
+                          className="text-stone-400 hover:text-red-600 p-0.5 rounded cursor-pointer"
+                          title="ছবি মুছে ফেলুন"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </h3>
+                    <p className="text-xs font-mono text-emerald-700">আইডি: {selectedMember.id} | রোল: {toBengaliNumber(selectedMember.rollNo)}</p>
+                    <button
+                      onClick={() => triggerUpload(selectedMember.id)}
+                      className="mt-1 text-[11px] font-bold text-emerald-800 hover:text-emerald-950 inline-flex items-center gap-1 cursor-pointer bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200 transition-colors"
+                    >
+                      <Camera className="w-3 h-3 text-amber-600" /> {selectedMember.photoUrl ? 'ছবি পরিবর্তন করুন' : 'প্রোফাইল ছবি যোগ করুন'}
+                    </button>
+                  </div>
                 </div>
               </div>
-              <button
-                onClick={() => setSelectedMember(null)}
-                className="p-1 rounded-full text-stone-400 hover:text-stone-700"
-              >
-                ✕
-              </button>
-            </div>
 
             <div className="space-y-3 text-xs sm:text-sm">
               <div className="grid grid-cols-2 gap-2 bg-stone-50 p-3 rounded-xl">
@@ -1056,15 +1070,29 @@ export const MemberList: React.FC<MemberListProps> = ({
                   '09': 'সেপ্টেম্বর', '10': 'অক্টোবর', '11': 'নভেম্বর', '12': 'ডিসেম্বর'
                 };
 
-                const months2026Keys = ['01', '02', '03'];
-                const months2026List = months2026Keys.map(k => ({
-                  key: k,
-                  name: `${monthNameMap[k]} ২০২৬`,
-                  amt: selectedMember.payments2026?.[k] ?? null
-                }));
+                const months2026Keys = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
+                const months2026List = months2026Keys.map(k => {
+                  const isRunning = k === '09';
+                  const isPast = Number(k) < 9;
+                  return {
+                    key: k,
+                    name: `${monthNameMap[k]} ২০২৬${isRunning ? ' (চলতি মাস)' : ''}`,
+                    amt: selectedMember.payments2026?.[k] ?? null,
+                    isRunning,
+                    isPast
+                  };
+                });
 
                 return (
                   <div className="space-y-4">
+                    {/* Real-time Dynamic Auto Calculation Notice */}
+                    <div className="bg-emerald-50 border border-emerald-300 rounded-xl px-3 py-2 flex items-center gap-2 text-xs">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
+                      <span className="font-semibold text-emerald-950">
+                        <strong>স্বয়ংক্রিয় হিসাব:</strong> প্রতি মাসে যে সদস্য যত টাকা জমা দিবে, সাথে সাথে তার ২০২৫ ও ২০২৬ এর মোট টাকা এবং সর্বমোট স্থিতি অটোমেটিক লাইভ হিসাব হয়ে যাবে।
+                      </span>
+                    </div>
+
                     {/* Top 3 Metric Cards */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                       <div className="p-3 bg-emerald-50 rounded-2xl border border-emerald-300">
@@ -1199,17 +1227,24 @@ export const MemberList: React.FC<MemberListProps> = ({
                         </thead>
                         <tbody className="divide-y divide-stone-100">
                           {months2026List.map(mo => (
-                            <tr key={mo.key}>
-                              <td className="p-2 font-medium">{mo.name}</td>
+                            <tr key={mo.key} className={mo.isRunning ? 'bg-amber-50/80 font-semibold' : ''}>
+                              <td className="p-2 font-medium flex items-center gap-1.5">
+                                {mo.isRunning && <span className="w-2 h-2 rounded-full bg-emerald-600 inline-block" />}
+                                <span>{mo.name}</span>
+                              </td>
                               <td className="p-2 text-center font-mono">২,৫০০ ৳</td>
                               <td className="p-2 text-center font-mono font-bold text-sky-900">
-                                {mo.amt !== null && mo.amt > 0 ? `${mo.amt} ৳` : '০ ৳'}
+                                {mo.amt !== null && mo.amt > 0 ? `${toBengaliNumber(mo.amt)} ৳` : '০ ৳'}
                               </td>
                               <td className="p-2 text-center">
                                 {mo.amt !== null && mo.amt > 0 ? (
                                   <span className="text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded font-bold text-[10px]">পরিশোধিত</span>
-                                ) : (
+                                ) : mo.isRunning ? (
+                                  <span className="text-red-700 bg-red-100 px-1.5 py-0.5 rounded font-bold text-[10px] border border-red-300">চলতি মাস বকেয়া</span>
+                                ) : mo.isPast ? (
                                   <span className="text-red-700 bg-red-100 px-1.5 py-0.5 rounded font-bold text-[10px]">বকেয়া</span>
+                                ) : (
+                                  <span className="text-stone-500 bg-stone-100 px-1.5 py-0.5 rounded text-[10px]">অপেক্ষমান</span>
                                 )}
                               </td>
                             </tr>
@@ -1287,24 +1322,40 @@ export const MemberList: React.FC<MemberListProps> = ({
                 </div>
               )}
             </div>
+          </div>
 
-            <div className="pt-3 border-t border-stone-200 flex justify-between gap-3">
+          {/* Sticky Bottom Action Bar with Back & Close */}
+            <div className="sticky bottom-0 z-20 bg-stone-100 px-4 sm:px-6 py-3 border-t border-stone-300 flex items-center justify-between gap-3 shrink-0 shadow-lg">
               <button
-                onClick={() => {
-                  setSelectedMember(null);
-                  onNavigate('payment');
-                }}
-                className="px-4 py-2 bg-emerald-800 text-white rounded-lg text-xs font-bold hover:bg-emerald-900 flex items-center gap-1"
-              >
-                <CreditCard className="w-3.5 h-3.5" /> এনার জন্য পেমেন্ট করুন
-              </button>
-
-              <button
+                type="button"
                 onClick={() => setSelectedMember(null)}
-                className="px-4 py-2 bg-stone-100 text-stone-700 hover:bg-stone-200 rounded-lg text-xs font-semibold"
+                className="px-4 py-2 bg-stone-800 hover:bg-stone-900 active:bg-black text-white rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 shadow-xs cursor-pointer transition-all border border-stone-700"
               >
-                বন্ধ করুন
+                <ArrowLeft className="w-4 h-4 text-amber-300" />
+                <span>← তালিকায় ফিরে যান (Back)</span>
               </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedMember(null);
+                    onNavigate('payment');
+                  }}
+                  className="px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <CreditCard className="w-3.5 h-3.5 text-amber-300" />
+                  <span className="hidden sm:inline">এনার জন্য</span> পেমেন্ট করুন
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedMember(null)}
+                  className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-900 rounded-xl text-xs sm:text-sm font-bold cursor-pointer transition-colors border border-red-300"
+                >
+                  ✕ বন্ধ করুন
+                </button>
+              </div>
             </div>
 
           </div>

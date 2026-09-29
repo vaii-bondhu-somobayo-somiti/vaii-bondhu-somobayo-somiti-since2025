@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { SocietyData, Member } from '../types';
 import { formatCurrency, toBengaliNumber, updateMemberPhoto } from '../utils/storage';
 import { compressAndReadFile } from '../utils/imageHelper';
-import { calculateMemberAllTotal } from './MemberList';
+import { calculateMemberYearTotal, calculateMemberAllTotal } from './MemberList';
 import { 
   UserCheck, 
   CreditCard, 
@@ -105,7 +105,12 @@ export const MemberDashboard: React.FC<MemberDashboardProps> = ({
   const dp2026_2 = member.downPayment2026_2 || 0;
   const totalDownPaymentMember = dp2025_1 + dp2025_2 + dp2026_1 + dp2026_2;
 
-  const totalDeposit = calculateMemberAllTotal(member);
+  const t2025 = calculateMemberYearTotal(member, 2025);
+  const t2026 = calculateMemberYearTotal(member, 2026);
+  const totalDeposit = t2025 + t2026;
+
+  const fine2025 = member.fine2025 !== undefined ? member.fine2025 : (member.fine || 0);
+  const fine2026 = member.fine2026 || 0;
 
   const handlePrintReceipt = () => {
     window.print();
@@ -234,11 +239,13 @@ export const MemberDashboard: React.FC<MemberDashboardProps> = ({
         {/* মোট জমা */}
         <div className="bg-white p-5 rounded-2xl border-2 border-emerald-600/30 shadow-md flex items-center justify-between">
           <div>
-            <span className="text-xs text-stone-500 font-bold block uppercase">মোট জমাকৃত অর্থ</span>
+            <span className="text-xs text-stone-500 font-bold block uppercase">সর্বমোট জমা (২০২৫+২০২৬)</span>
             <h3 className="text-2xl font-black text-emerald-950 mt-1">
               {formatCurrency(totalDeposit)}
             </h3>
-            <span className="text-[10px] text-emerald-700 font-semibold">সমিতি ফান্ডে সংরক্ষিত</span>
+            <span className="text-[10px] text-emerald-700 font-semibold">
+              ২০২৫: {formatCurrency(t2025)} | ২০২৬: {formatCurrency(t2026)}
+            </span>
           </div>
           <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center">
             <Coins className="w-6 h-6" />
@@ -394,7 +401,7 @@ export const MemberDashboard: React.FC<MemberDashboardProps> = ({
           <table className="w-full text-left text-xs sm:text-sm border-collapse">
             <thead>
               <tr className="bg-emerald-950 text-white">
-                <th className="p-3">বিবরণ / মাস</th>
+                <th className="p-3">বিবরণ / খাত</th>
                 <th className="p-3 text-center">নির্ধারিত হার</th>
                 <th className="p-3 text-center">পরিশোধিত টাকা</th>
                 <th className="p-3 text-center">স্ট্যাটাস</th>
@@ -402,8 +409,13 @@ export const MemberDashboard: React.FC<MemberDashboardProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-200 border-b border-stone-200">
+              {/* ২০২৫ সেকশন */}
+              <tr className="bg-emerald-100/70 font-bold text-emerald-950">
+                <td colSpan={4} className="p-2.5">১. ২০২৫ সালের চাঁদা ও কিস্তি বিবরণী</td>
+                <td className="p-2.5 text-right font-mono text-emerald-900">উপমোট: {formatCurrency(t2025)}</td>
+              </tr>
               <tr>
-                <td className="p-3 font-medium">আগস্ট ২০২৫ মাসিক চাঁদা</td>
+                <td className="p-3 font-medium pl-6">আগস্ট ২০২৫ মাসিক চাঁদা</td>
                 <td className="p-3 text-center font-mono">২,৫০০ ৳</td>
                 <td className="p-3 text-center font-mono font-bold text-emerald-800">
                   {member.august ? `${member.august} ৳` : '—'}
@@ -421,7 +433,7 @@ export const MemberDashboard: React.FC<MemberDashboardProps> = ({
               </tr>
 
               <tr>
-                <td className="p-3 font-medium">সেপ্টেম্বর ২০২৫ মাসিক চাঁদা</td>
+                <td className="p-3 font-medium pl-6">সেপ্টেম্বর ২০২৫ মাসিক চাঁদা</td>
                 <td className="p-3 text-center font-mono">২,৫০০ ৳</td>
                 <td className="p-3 text-center font-mono font-bold text-emerald-800">
                   {member.september ? `${member.september} ৳` : '—'}
@@ -439,33 +451,126 @@ export const MemberDashboard: React.FC<MemberDashboardProps> = ({
               </tr>
 
               <tr>
-                <td className="p-3 font-medium">ডাউন পেমেন্ট (৬ মাসভিত্তিক)</td>
-                <td className="p-3 text-center font-mono">৬ মাস পর পর</td>
-                <td className="p-3 text-center font-mono">
-                  {totalDownPaymentMember ? `${totalDownPaymentMember} ৳` : '—'}
+                <td className="p-3 font-medium pl-6">১ম ৬ মাস ডাউন পেমেন্ট (২০২৫)</td>
+                <td className="p-3 text-center font-mono">৩,০০০ ৳</td>
+                <td className="p-3 text-center font-mono font-bold text-emerald-800">
+                  {dp2025_1 > 0 ? `${dp2025_1} ৳` : '—'}
                 </td>
-                <td className="p-3 text-center text-emerald-700 font-semibold">হিসাবভুক্ত</td>
+                <td className="p-3 text-center text-emerald-700 font-semibold">
+                  {dp2025_1 > 0 ? 'পরিশোধিত' : 'বাকি'}
+                </td>
                 <td className="p-3 text-right font-mono font-bold">
-                  {formatCurrency(totalDownPaymentMember)}
+                  {formatCurrency(dp2025_1)}
                 </td>
               </tr>
 
               <tr>
-                <td className="p-3 font-medium">বিলম্ব জরিমানা</td>
+                <td className="p-3 font-medium pl-6">২য় ৬ মাস ডাউন পেমেন্ট (২০২৫)</td>
+                <td className="p-3 text-center font-mono">—</td>
+                <td className="p-3 text-center font-mono font-bold text-emerald-800">
+                  {dp2025_2 > 0 ? `${dp2025_2} ৳` : '—'}
+                </td>
+                <td className="p-3 text-center text-emerald-700 font-semibold">
+                  {dp2025_2 > 0 ? 'পরিশোধিত' : 'বাকি'}
+                </td>
+                <td className="p-3 text-right font-mono font-bold">
+                  {formatCurrency(dp2025_2)}
+                </td>
+              </tr>
+
+              <tr>
+                <td className="p-3 font-medium pl-6">বিলম্ব জরিমানা (২০২৫)</td>
                 <td className="p-3 text-center font-mono">—</td>
                 <td className="p-3 text-center font-mono">
-                  {member.fine ? `${member.fine} ৳` : '—'}
+                  {fine2025 ? `${fine2025} ৳` : '—'}
                 </td>
-                <td className="p-3 text-center text-emerald-700 font-semibold">পরিশোধিত</td>
+                <td className="p-3 text-center text-emerald-700 font-semibold">
+                  {fine2025 > 0 ? 'ধার্যকৃত' : 'নাই'}
+                </td>
                 <td className="p-3 text-right font-mono font-bold">
-                  {formatCurrency(member.fine || 0)}
+                  {formatCurrency(fine2025)}
+                </td>
+              </tr>
+
+              {/* ২০২৬ সেকশন */}
+              <tr className="bg-sky-100/70 font-bold text-sky-950">
+                <td colSpan={4} className="p-2.5">২. ২০২৬ সালের চাঁদা ও কিস্তি বিবরণী (চলমান)</td>
+                <td className="p-2.5 text-right font-mono text-sky-900">উপমোট: {formatCurrency(t2026)}</td>
+              </tr>
+
+              {['01', '02', '03'].map(k => {
+                const names: Record<string, string> = { '01': 'জানুয়ারি', '02': 'ফেব্রুয়ারি', '03': 'মার্চ' };
+                const val = member.payments2026?.[k];
+                const paid = val !== null && val !== undefined && val > 0;
+                return (
+                  <tr key={k}>
+                    <td className="p-3 font-medium pl-6">{names[k]} ২০২৬ মাসিক চাঁদা</td>
+                    <td className="p-3 text-center font-mono">২,৫০০ ৳</td>
+                    <td className="p-3 text-center font-mono font-bold text-sky-800">
+                      {paid ? `${val} ৳` : '—'}
+                    </td>
+                    <td className="p-3 text-center">
+                      {paid ? (
+                        <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-xs font-bold">পরিশোধিত</span>
+                      ) : (
+                        <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-bold">বকেয়া</span>
+                      )}
+                    </td>
+                    <td className="p-3 text-right font-mono font-bold">
+                      {formatCurrency(val || 0)}
+                    </td>
+                  </tr>
+                );
+              })}
+
+              <tr>
+                <td className="p-3 font-medium pl-6">১ম ৬ মাস ডাউন পেমেন্ট (২০২৬)</td>
+                <td className="p-3 text-center font-mono">—</td>
+                <td className="p-3 text-center font-mono font-bold text-sky-800">
+                  {dp2026_1 > 0 ? `${dp2026_1} ৳` : '—'}
+                </td>
+                <td className="p-3 text-center text-sky-800 font-semibold">
+                  {dp2026_1 > 0 ? 'পরিশোধিত' : 'বাকি'}
+                </td>
+                <td className="p-3 text-right font-mono font-bold">
+                  {formatCurrency(dp2026_1)}
+                </td>
+              </tr>
+
+              <tr>
+                <td className="p-3 font-medium pl-6">২য় ৬ মাস ডাউন পেমেন্ট (২০২৬)</td>
+                <td className="p-3 text-center font-mono">—</td>
+                <td className="p-3 text-center font-mono font-bold text-sky-800">
+                  {dp2026_2 > 0 ? `${dp2026_2} ৳` : '—'}
+                </td>
+                <td className="p-3 text-center text-sky-800 font-semibold">
+                  {dp2026_2 > 0 ? 'পরিশোধিত' : 'বাকি'}
+                </td>
+                <td className="p-3 text-right font-mono font-bold">
+                  {formatCurrency(dp2026_2)}
+                </td>
+              </tr>
+
+              <tr>
+                <td className="p-3 font-medium pl-6">বিলম্ব জরিমানা (২০২৬)</td>
+                <td className="p-3 text-center font-mono">—</td>
+                <td className="p-3 text-center font-mono">
+                  {fine2026 ? `${fine2026} ৳` : '—'}
+                </td>
+                <td className="p-3 text-center text-sky-800 font-semibold">
+                  {fine2026 > 0 ? 'ধার্যকৃত' : 'নাই'}
+                </td>
+                <td className="p-3 text-right font-mono font-bold">
+                  {formatCurrency(fine2026)}
                 </td>
               </tr>
             </tbody>
             <tfoot>
-              <tr className="bg-stone-50 text-stone-900 font-bold">
-                <td colSpan={4} className="p-3 text-right text-sm">সর্বমোট জমাকৃত স্থিতি:</td>
-                <td className="p-3 text-right text-base text-emerald-950 font-black font-mono">
+              <tr className="bg-stone-900 text-white font-bold">
+                <td colSpan={4} className="p-3 text-right text-sm text-amber-300">
+                  সর্বমোট জমাকৃত লাইফটাইম স্থিতি (২০২৫ + ২০২৬):
+                </td>
+                <td className="p-3 text-right text-base text-amber-300 font-black font-mono">
                   {formatCurrency(totalDeposit)}
                 </td>
               </tr>

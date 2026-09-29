@@ -41,29 +41,36 @@ interface MemberListProps {
   onDataUpdated?: (newData: SocietyData) => void;
 }
 
-export const calculateMemberAllTotal = (m: Member): number => {
-  const dp2025_1 = m.downPayment2025_1 !== undefined ? m.downPayment2025_1 : (m.downPayment || 0);
-  const dp2025_2 = m.downPayment2025_2 || 0;
-  const dp2026_1 = m.downPayment2026_1 || 0;
-  const dp2026_2 = m.downPayment2026_2 || 0;
-  const fine2025 = m.fine2025 !== undefined ? m.fine2025 : (m.fine || 0);
-  const fine2026 = m.fine2026 || 0;
-
-  let total = dp2025_1 + dp2025_2 + dp2026_1 + dp2026_2 + fine2025 + fine2026;
-
-  if (m.payments2025) {
-    Object.values(m.payments2025).forEach((val) => {
-      if (val && val > 0) total += val;
-    });
+export const calculateMemberYearTotal = (m: Member, targetYear: number): number => {
+  if (targetYear === 2025) {
+    const dp1 = m.downPayment2025_1 !== undefined ? m.downPayment2025_1 : (m.downPayment || 0);
+    const dp2 = m.downPayment2025_2 || 0;
+    const fine = m.fine2025 !== undefined ? m.fine2025 : (m.fine || 0);
+    let months = 0;
+    if (m.payments2025) {
+      Object.values(m.payments2025).forEach((val) => {
+        if (val && val > 0) months += val;
+      });
+    } else {
+      months = (m.august || 0) + (m.september || 0) + (m.october || 0);
+    }
+    return dp1 + dp2 + fine + months;
   } else {
-    total += (m.august || 0) + (m.september || 0) + (m.october || 0);
+    const dp1 = m.downPayment2026_1 || 0;
+    const dp2 = m.downPayment2026_2 || 0;
+    const fine = m.fine2026 || 0;
+    let months = 0;
+    if (m.payments2026) {
+      Object.values(m.payments2026).forEach((val) => {
+        if (val && val > 0) months += val;
+      });
+    }
+    return dp1 + dp2 + fine + months;
   }
-  if (m.payments2026) {
-    Object.values(m.payments2026).forEach((val) => {
-      if (val && val > 0) total += val;
-    });
-  }
-  return total;
+};
+
+export const calculateMemberAllTotal = (m: Member): number => {
+  return calculateMemberYearTotal(m, 2025) + calculateMemberYearTotal(m, 2026);
 };
 
 export const MemberList: React.FC<MemberListProps> = ({
@@ -1019,53 +1026,260 @@ export const MemberList: React.FC<MemberListProps> = ({
                   <span className="text-stone-500 text-[11px] block">যোগদানের তারিখ:</span>
                   <span>{selectedMember.joinedDate}</span>
                 </div>
-                <div>
-                  <span className="text-stone-500 text-[11px] block">মোট জমা:</span>
-                  <strong className="text-emerald-800 font-bold text-base">
-                    {formatCurrency(calculateMemberAllTotal(selectedMember))}
-                  </strong>
-                </div>
               </div>
 
-              {/* Breakdown */}
-              <div className="border border-stone-200 rounded-xl overflow-hidden">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-stone-100 font-semibold text-stone-700">
-                    <tr>
-                      <th className="p-2">মাস / খাত</th>
-                      <th className="p-2 text-center">নির্ধারিত</th>
-                      <th className="p-2 text-center">জমা</th>
-                      <th className="p-2 text-center">স্ট্যাটাস</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-stone-100">
-                    <tr>
-                      <td className="p-2 font-medium">আগস্ট ২০২৫</td>
-                      <td className="p-2 text-center font-mono">২,৫০০ ৳</td>
-                      <td className="p-2 text-center font-mono font-bold text-emerald-800">{selectedMember.august ? `${selectedMember.august} ৳` : '০ ৳'}</td>
-                      <td className="p-2 text-center">{selectedMember.august ? <span className="text-emerald-700 font-bold">পরিশোধিত</span> : <span className="text-red-600 font-bold">বকেয়া</span>}</td>
-                    </tr>
-                    <tr>
-                      <td className="p-2 font-medium">সেপ্টেম্বর ২০২৫</td>
-                      <td className="p-2 text-center font-mono">২,৫০০ ৳</td>
-                      <td className="p-2 text-center font-mono font-bold text-emerald-800">{selectedMember.september ? `${selectedMember.september} ৳` : '০ ৳'}</td>
-                      <td className="p-2 text-center">{selectedMember.september ? <span className="text-emerald-700 font-bold">পরিশোধিত</span> : <span className="text-red-600 font-bold">বকেয়া</span>}</td>
-                    </tr>
-                    <tr>
-                      <td className="p-2 font-medium">ডাউন-পেমেন্ট</td>
-                      <td className="p-2 text-center font-mono">৫,০০০ ৳</td>
-                      <td className="p-2 text-center font-mono">{selectedMember.downPayment || 0} ৳</td>
-                      <td className="p-2 text-center"><span className="text-stone-500">আসন্ন</span></td>
-                    </tr>
-                    <tr>
-                      <td className="p-2 font-medium">জরিমানা</td>
-                      <td className="p-2 text-center font-mono">—</td>
-                      <td className="p-2 text-center font-mono">{selectedMember.fine || 0} ৳</td>
-                      <td className="p-2 text-center"><span className="text-emerald-700">নাই</span></td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+              {/* 3 Prominent Summary Cards */}
+              {(() => {
+                const t2025 = calculateMemberYearTotal(selectedMember, 2025);
+                const t2026 = calculateMemberYearTotal(selectedMember, 2026);
+                const grandTotal = t2025 + t2026;
+
+                const dp2025_1 = selectedMember.downPayment2025_1 !== undefined ? selectedMember.downPayment2025_1 : (selectedMember.downPayment || 0);
+                const dp2025_2 = selectedMember.downPayment2025_2 || 0;
+                const fine2025 = selectedMember.fine2025 !== undefined ? selectedMember.fine2025 : (selectedMember.fine || 0);
+
+                const dp2026_1 = selectedMember.downPayment2026_1 || 0;
+                const dp2026_2 = selectedMember.downPayment2026_2 || 0;
+                const fine2026 = selectedMember.fine2026 || 0;
+
+                const months2025List = [
+                  { key: '08', name: 'আগস্ট ২০২৫', amt: selectedMember.payments2025?.['08'] !== undefined ? selectedMember.payments2025['08'] : selectedMember.august },
+                  { key: '09', name: 'সেপ্টেম্বর ২০২৫', amt: selectedMember.payments2025?.['09'] !== undefined ? selectedMember.payments2025['09'] : selectedMember.september },
+                  { key: '10', name: 'অক্টোবর ২০২৫', amt: selectedMember.payments2025?.['10'] !== undefined ? selectedMember.payments2025['10'] : selectedMember.october },
+                  { key: '11', name: 'নভেম্বর ২০২৫', amt: selectedMember.payments2025?.['11'] ?? null },
+                  { key: '12', name: 'ডিসেম্বর ২০২৫', amt: selectedMember.payments2025?.['12'] ?? null }
+                ];
+
+                const monthNameMap: Record<string, string> = {
+                  '01': 'জানুয়ারি', '02': 'ফেব্রুয়ারি', '03': 'মার্চ', '04': 'এপ্রিল',
+                  '05': 'মে', '06': 'জুন', '07': 'জুলাই', '08': 'আগস্ট',
+                  '09': 'সেপ্টেম্বর', '10': 'অক্টোবর', '11': 'নভেম্বর', '12': 'ডিসেম্বর'
+                };
+
+                const months2026Keys = ['01', '02', '03'];
+                const months2026List = months2026Keys.map(k => ({
+                  key: k,
+                  name: `${monthNameMap[k]} ২০২৬`,
+                  amt: selectedMember.payments2026?.[k] ?? null
+                }));
+
+                return (
+                  <div className="space-y-4">
+                    {/* Top 3 Metric Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                      <div className="p-3 bg-emerald-50 rounded-2xl border border-emerald-300">
+                        <span className="text-[11px] font-bold text-emerald-800 uppercase block">১. ২০২৫ মোট জমা</span>
+                        <div className="text-xl font-black text-emerald-950 font-mono mt-0.5">
+                          {formatCurrency(t2025)}
+                        </div>
+                        <span className="text-[10px] text-emerald-700">মাসিক চাঁদা + ডিপি + জরিমানা</span>
+                      </div>
+
+                      <div className="p-3 bg-sky-50 rounded-2xl border border-sky-300">
+                        <span className="text-[11px] font-bold text-sky-800 uppercase block">২. ২০২৬ মোট জমা</span>
+                        <div className="text-xl font-black text-sky-950 font-mono mt-0.5">
+                          {formatCurrency(t2026)}
+                        </div>
+                        <span className="text-[10px] text-sky-700">চলমান সকল মাসের জমা</span>
+                      </div>
+
+                      <div className="p-3 bg-gradient-to-br from-amber-500 to-amber-600 text-white rounded-2xl shadow-sm border border-amber-400">
+                        <span className="text-[11px] font-bold text-amber-100 uppercase block">৩. সর্বমোট জমা (২০২৫+২০২৬)</span>
+                        <div className="text-xl font-black font-mono mt-0.5 text-white">
+                          {formatCurrency(grandTotal)}
+                        </div>
+                        <span className="text-[10px] text-amber-100">উভয় বছরের সর্বমোট স্থিতি</span>
+                      </div>
+                    </div>
+
+                    {/* ২০২৫ সালের সম্পূর্ণ বিবরণী */}
+                    <div className="border border-emerald-200 rounded-2xl overflow-hidden bg-white shadow-2xs">
+                      <div className="bg-emerald-900 text-white px-3.5 py-2 flex items-center justify-between">
+                        <span className="font-bold text-xs flex items-center gap-1.5">
+                          <Calendar className="w-3.5 h-3.5 text-amber-300" />
+                          ২০২৫ সালের হিসাব বিবরণী
+                        </span>
+                        <span className="font-mono font-bold text-xs text-amber-300">
+                          সাবটোটাল: {formatCurrency(t2025)}
+                        </span>
+                      </div>
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-emerald-50/70 font-semibold text-emerald-950 border-b border-emerald-100">
+                          <tr>
+                            <th className="p-2">খাত / মাস</th>
+                            <th className="p-2 text-center">নির্ধারিত</th>
+                            <th className="p-2 text-center">পরিশোধিত</th>
+                            <th className="p-2 text-center">স্ট্যাটাস</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-stone-100">
+                          {months2025List.map(mo => (
+                            <tr key={mo.key}>
+                              <td className="p-2 font-medium">{mo.name}</td>
+                              <td className="p-2 text-center font-mono">২,৫০০ ৳</td>
+                              <td className="p-2 text-center font-mono font-bold text-emerald-900">
+                                {mo.amt !== null && mo.amt > 0 ? `${mo.amt} ৳` : '০ ৳'}
+                              </td>
+                              <td className="p-2 text-center">
+                                {mo.amt !== null && mo.amt > 0 ? (
+                                  <span className="text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded font-bold text-[10px]">পরিশোধিত</span>
+                                ) : (
+                                  <span className="text-red-700 bg-red-100 px-1.5 py-0.5 rounded font-bold text-[10px]">বকেয়া</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                          <tr>
+                            <td className="p-2 font-medium">১ম ৬ মাস ডাউন পেমেন্ট (২০২৫)</td>
+                            <td className="p-2 text-center font-mono">৩,০০০ ৳</td>
+                            <td className="p-2 text-center font-mono font-bold text-emerald-900">{dp2025_1} ৳</td>
+                            <td className="p-2 text-center">
+                              {dp2025_1 > 0 ? (
+                                <span className="text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded font-bold text-[10px]">পরিশোধিত</span>
+                              ) : (
+                                <span className="text-stone-500 bg-stone-100 px-1.5 py-0.5 rounded text-[10px]">০ ৳</span>
+                              )}
+                            </td>
+                          </tr>
+                          <tr>
+                            <td className="p-2 font-medium">২য় ৬ মাস ডাউন পেমেন্ট (২০২৫)</td>
+                            <td className="p-2 text-center font-mono">—</td>
+                            <td className="p-2 text-center font-mono font-bold text-emerald-900">{dp2025_2} ৳</td>
+                            <td className="p-2 text-center">
+                              {dp2025_2 > 0 ? (
+                                <span className="text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded font-bold text-[10px]">পরিশোধিত</span>
+                              ) : (
+                                <span className="text-stone-500 bg-stone-100 px-1.5 py-0.5 rounded text-[10px]">০ ৳</span>
+                              )}
+                            </td>
+                          </tr>
+                          <tr>
+                            <td className="p-2 font-medium">বিলম্ব জরিমানা (২০২৫)</td>
+                            <td className="p-2 text-center font-mono">—</td>
+                            <td className="p-2 text-center font-mono font-bold text-red-700">{fine2025} ৳</td>
+                            <td className="p-2 text-center">
+                              {fine2025 > 0 ? (
+                                <span className="text-red-700 bg-red-100 px-1.5 py-0.5 rounded font-bold text-[10px]">জরিমানা ধার্য</span>
+                              ) : (
+                                <span className="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-medium text-[10px]">নাই</span>
+                              )}
+                            </td>
+                          </tr>
+                        </tbody>
+                        <tfoot className="bg-emerald-50/80 font-bold border-t border-emerald-200">
+                          <tr>
+                            <td colSpan={2} className="p-2 text-stone-800">২০২৫ সালের মোট জমা:</td>
+                            <td colSpan={2} className="p-2 text-right font-mono font-black text-emerald-950 text-sm">
+                              {formatCurrency(t2025)}
+                            </td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+
+                    {/* ২০২৬ সালের সম্পূর্ণ বিবরণী */}
+                    <div className="border border-sky-200 rounded-2xl overflow-hidden bg-white shadow-2xs">
+                      <div className="bg-sky-900 text-white px-3.5 py-2 flex items-center justify-between">
+                        <span className="font-bold text-xs flex items-center gap-1.5">
+                          <TrendingUp className="w-3.5 h-3.5 text-sky-300" />
+                          ২০২৬ সালের হিসাব বিবরণী (চলমান)
+                        </span>
+                        <span className="font-mono font-bold text-xs text-sky-200">
+                          সাবটোটাল: {formatCurrency(t2026)}
+                        </span>
+                      </div>
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-sky-50/70 font-semibold text-sky-950 border-b border-sky-100">
+                          <tr>
+                            <th className="p-2">খাত / মাস</th>
+                            <th className="p-2 text-center">নির্ধারিত</th>
+                            <th className="p-2 text-center">পরিশোধিত</th>
+                            <th className="p-2 text-center">স্ট্যাটাস</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-stone-100">
+                          {months2026List.map(mo => (
+                            <tr key={mo.key}>
+                              <td className="p-2 font-medium">{mo.name}</td>
+                              <td className="p-2 text-center font-mono">২,৫০০ ৳</td>
+                              <td className="p-2 text-center font-mono font-bold text-sky-900">
+                                {mo.amt !== null && mo.amt > 0 ? `${mo.amt} ৳` : '০ ৳'}
+                              </td>
+                              <td className="p-2 text-center">
+                                {mo.amt !== null && mo.amt > 0 ? (
+                                  <span className="text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded font-bold text-[10px]">পরিশোধিত</span>
+                                ) : (
+                                  <span className="text-red-700 bg-red-100 px-1.5 py-0.5 rounded font-bold text-[10px]">বকেয়া</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                          <tr>
+                            <td className="p-2 font-medium">১ম ৬ মাস ডাউন পেমেন্ট (২০২৬)</td>
+                            <td className="p-2 text-center font-mono">—</td>
+                            <td className="p-2 text-center font-mono font-bold text-sky-900">{dp2026_1} ৳</td>
+                            <td className="p-2 text-center">
+                              {dp2026_1 > 0 ? (
+                                <span className="text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded font-bold text-[10px]">পরিশোধিত</span>
+                              ) : (
+                                <span className="text-stone-500 bg-stone-100 px-1.5 py-0.5 rounded text-[10px]">০ ৳</span>
+                              )}
+                            </td>
+                          </tr>
+                          <tr>
+                            <td className="p-2 font-medium">২য় ৬ মাস ডাউন পেমেন্ট (২০২৬)</td>
+                            <td className="p-2 text-center font-mono">—</td>
+                            <td className="p-2 text-center font-mono font-bold text-sky-900">{dp2026_2} ৳</td>
+                            <td className="p-2 text-center">
+                              {dp2026_2 > 0 ? (
+                                <span className="text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded font-bold text-[10px]">পরিশোধিত</span>
+                              ) : (
+                                <span className="text-stone-500 bg-stone-100 px-1.5 py-0.5 rounded text-[10px]">০ ৳</span>
+                              )}
+                            </td>
+                          </tr>
+                          <tr>
+                            <td className="p-2 font-medium">বিলম্ব জরিমানা (২০২৬)</td>
+                            <td className="p-2 text-center font-mono">—</td>
+                            <td className="p-2 text-center font-mono font-bold text-red-700">{fine2026} ৳</td>
+                            <td className="p-2 text-center">
+                              {fine2026 > 0 ? (
+                                <span className="text-red-700 bg-red-100 px-1.5 py-0.5 rounded font-bold text-[10px]">জরিমানা ধার্য</span>
+                              ) : (
+                                <span className="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-medium text-[10px]">নাই</span>
+                              )}
+                            </td>
+                          </tr>
+                        </tbody>
+                        <tfoot className="bg-sky-50/80 font-bold border-t border-sky-200">
+                          <tr>
+                            <td colSpan={2} className="p-2 text-stone-800">২০২৬ সালের মোট জমা:</td>
+                            <td colSpan={2} className="p-2 text-right font-mono font-black text-sky-950 text-sm">
+                              {formatCurrency(t2026)}
+                            </td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+
+                    {/* সর্বমোট লাইফটাইম হিসাব বক্স */}
+                    <div className="bg-stone-900 text-white p-3.5 rounded-2xl flex items-center justify-between border-2 border-amber-400 shadow-md">
+                      <div>
+                        <span className="text-xs font-bold text-amber-300 block">
+                          সদস্যের সর্বমোট লাইফটাইম জমা (২০২৫ + ২০২৬)
+                        </span>
+                        <span className="text-[11px] text-stone-300 font-mono">
+                          ২০২৫ ({toBengaliNumber(t2025)} ৳) + ২০২৬ ({toBengaliNumber(t2026)} ৳)
+                        </span>
+                      </div>
+                      <div className="text-2xl font-black text-amber-300 font-mono">
+                        {formatCurrency(grandTotal)}
+                      </div>
+                    </div>
+
+                  </div>
+                );
+              })()}
 
               {selectedMember.notes && (
                 <div className="bg-amber-50 p-2.5 rounded-lg border border-amber-200 text-amber-900 text-xs">

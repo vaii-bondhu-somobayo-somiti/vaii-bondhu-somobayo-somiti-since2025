@@ -45,7 +45,8 @@ import {
   Image as ImageIcon,
   Cloud,
   Lock,
-  KeyRound
+  KeyRound,
+  Coins
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -464,6 +465,74 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     downPayment: 0,
     notes: ''
   });
+
+  // Bulk Fast Fee Update State
+  const [bulkTargetField, setBulkTargetField] = useState<string>('09');
+  const [bulkCustomInput, setBulkCustomInput] = useState<string>('');
+
+  const handleApplyBulkToAll = (amount: number | null, fieldName: string) => {
+    const amtStr = amount !== null && amount > 0 ? `${amount} ৳` : '০ ৳ (বাকি)';
+    if (!window.confirm(`আপনি কি নিশ্চিত যে সকল ${data.members.length} জন সদস্যের "${fieldName}" হিসেবে ${amtStr} নির্ধারণ করতে চান? এটি ফায়ারবেসে ক্লাউডেও সাথে সাথে সংরক্ষিত হবে।`)) {
+      return;
+    }
+
+    const updatedMembers = data.members.map((m) => {
+      if (bulkTargetField === 'dp1_2025') {
+        const val = amount || 0;
+        const cur2 = m.downPayment2025_2 || 0;
+        return { ...m, downPayment2025_1: val, downPayment: val + cur2 };
+      }
+      if (bulkTargetField === 'dp2_2025') {
+        const cur1 = m.downPayment2025_1 !== undefined ? m.downPayment2025_1 : (m.downPayment || 0);
+        const val = amount || 0;
+        return { ...m, downPayment2025_2: val, downPayment: cur1 + val };
+      }
+      if (bulkTargetField === 'fine_2025') {
+        return { ...m, fine2025: amount || 0, fine: amount || 0 };
+      }
+      if (bulkTargetField === 'dp1_2026') {
+        return { ...m, downPayment2026_1: amount || 0 };
+      }
+      if (bulkTargetField === 'dp2_2026') {
+        return { ...m, downPayment2026_2: amount || 0 };
+      }
+      if (bulkTargetField === 'fine_2026') {
+        return { ...m, fine2026: amount || 0 };
+      }
+      if (bulkTargetField.endsWith('_2026')) {
+        const monthKey = bulkTargetField.replace('_2026', '');
+        return {
+          ...m,
+          payments2026: {
+            ...(m.payments2026 || {}),
+            [monthKey]: amount
+          }
+        };
+      }
+      // Otherwise 2025 month
+      const monthKey = bulkTargetField;
+      return {
+        ...m,
+        payments2025: {
+          ...(m.payments2025 || {}),
+          [monthKey]: amount
+        },
+        august: monthKey === '08' ? amount : m.august,
+        september: monthKey === '09' ? amount : m.september,
+        october: monthKey === '10' ? amount : m.october
+      };
+    });
+
+    const updated: SocietyData = {
+      ...data,
+      members: updatedMembers,
+      lastUpdated: new Date().toISOString()
+    };
+
+    saveStoredData(updated);
+    onDataUpdated(updated);
+    showNotification('success', `সফল: সকল ${data.members.length} জন সদস্যের "${fieldName}" এক ক্লিকে ${amtStr} সেট করা হয়েছে!`);
+  };
 
   const handleSaveMember = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1886,6 +1955,136 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
           </div>
 
+          {/* ======================================================== */}
+          {/* BULK MEMBER FEE UPDATE SHORTCUT BAR                     */}
+          {/* ======================================================== */}
+          <div className="bg-gradient-to-br from-emerald-950 via-emerald-900 to-stone-900 text-white p-5 rounded-3xl border-2 border-amber-400 shadow-xl space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-800/80 pb-3">
+              <div>
+                <h4 className="text-sm font-bold text-amber-300 flex items-center gap-2">
+                  <Coins className="w-4 h-4 text-amber-300" />
+                  এক সাথে সবাইকে টাকা দেওয়ার শর্টকাট (Bulk Fast Update)
+                </h4>
+                <p className="text-[11px] text-emerald-200 mt-0.5">
+                  নিচের যেকোনো মাস বা ডাউনপেমেন্ট নির্বাচন করে ২০০০, ২৫০০, ৩০০০ বা কাস্টম টাকা এক ক্লিকে সকল সদস্যের জন্য সেট করুন
+                </p>
+              </div>
+              <span className="text-[10px] bg-amber-400 text-stone-950 font-black px-2.5 py-1 rounded-full uppercase tracking-wider shrink-0 self-start sm:self-auto">
+                অ্যাডমিন স্পেশাল
+              </span>
+            </div>
+
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-1">
+              {/* Target Selector */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-stone-300 font-bold shrink-0">খাত / মাস:</span>
+                <select
+                  value={bulkTargetField}
+                  onChange={(e) => setBulkTargetField(e.target.value)}
+                  className="bg-stone-800 border-2 border-emerald-500 text-white rounded-xl px-3 py-2 text-xs font-bold outline-hidden cursor-pointer"
+                  id="adminBulkSelectField"
+                >
+                  <optgroup label="২০২৫ সালের হিসাব">
+                    <option value="08">আগস্ট ২০২৫ মাসিক চাঁদা</option>
+                    <option value="09">সেপ্টেম্বর ২০২৫ মাসিক চাঁদা</option>
+                    <option value="10">অক্টোবর ২০২৫ মাসিক চাঁদা</option>
+                    <option value="11">নভেম্বর ২০২৫ মাসিক চাঁদা</option>
+                    <option value="12">ডিসেম্বর ২০২৫ মাসিক চাঁদা</option>
+                    <option value="dp1_2025">১ম ৬ মাস ডাউন পেমেন্ট (২০২৫)</option>
+                    <option value="dp2_2025">২য় ৬ মাস ডাউন পেমেন্ট (২০২৫)</option>
+                    <option value="fine_2025">বিলম্ব জরিমানা (২০২৫)</option>
+                  </optgroup>
+                  <optgroup label="২০২৬ সালের হিসাব (চলমান)">
+                    <option value="01_2026">জানুয়ারি ২০২৬ মাসিক চাঁদা</option>
+                    <option value="02_2026">ফেব্রুয়ারি ২০২৬ মাসিক চাঁদা</option>
+                    <option value="03_2026">মার্চ ২০২৬ মাসিক চাঁদা</option>
+                    <option value="dp1_2026">১ম ৬ মাস ডাউন পেমেন্ট (২০২৬)</option>
+                    <option value="dp2_2026">২য় ৬ মাস ডাউন পেমেন্ট (২০২৬)</option>
+                    <option value="fine_2026">বিলম্ব জরিমানা (২০২৬)</option>
+                  </optgroup>
+                </select>
+              </div>
+
+              {/* Fast Shortcut Buttons: 2000, 2500, 3000, 0, Custom */}
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const sel = document.getElementById('adminBulkSelectField') as HTMLSelectElement;
+                    const text = sel ? sel.options[sel.selectedIndex]?.text : 'নির্বাচিত খাত';
+                    handleApplyBulkToAll(2000, text);
+                  }}
+                  className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold font-mono transition-all cursor-pointer shadow-xs border border-emerald-500"
+                >
+                  সবাইকে ২০০০ ৳
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const sel = document.getElementById('adminBulkSelectField') as HTMLSelectElement;
+                    const text = sel ? sel.options[sel.selectedIndex]?.text : 'নির্বাচিত খাত';
+                    handleApplyBulkToAll(2500, text);
+                  }}
+                  className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-stone-950 rounded-xl text-xs font-black font-mono transition-all cursor-pointer shadow-md border border-amber-300"
+                >
+                  সবাইকে ২৫০০ ৳
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const sel = document.getElementById('adminBulkSelectField') as HTMLSelectElement;
+                    const text = sel ? sel.options[sel.selectedIndex]?.text : 'নির্বাচিত খাত';
+                    handleApplyBulkToAll(3000, text);
+                  }}
+                  className="px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold font-mono transition-all cursor-pointer shadow-xs border border-sky-400"
+                >
+                  সবাইকে ৩০০০ ৳
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const sel = document.getElementById('adminBulkSelectField') as HTMLSelectElement;
+                    const text = sel ? sel.options[sel.selectedIndex]?.text : 'নির্বাচিত খাত';
+                    handleApplyBulkToAll(0, text);
+                  }}
+                  className="px-2.5 py-1.5 bg-red-900/80 hover:bg-red-800 text-red-200 rounded-xl text-xs font-semibold transition-all cursor-pointer border border-red-700"
+                >
+                  সবাইকে ০ (বাকি)
+                </button>
+
+                {/* Custom Amount */}
+                <div className="flex items-center gap-1.5 bg-stone-800/90 p-1 rounded-xl border border-stone-600">
+                  <input
+                    type="number"
+                    value={bulkCustomInput}
+                    onChange={(e) => setBulkCustomInput(e.target.value)}
+                    placeholder="কাস্টম টাকা"
+                    className="w-24 px-2 py-1 bg-stone-950 border border-stone-700 rounded-lg text-xs text-white font-mono font-bold outline-hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!bulkCustomInput || isNaN(Number(bulkCustomInput))) {
+                        alert('সঠিক টাকার অঙ্ক লিখুন!');
+                        return;
+                      }
+                      const sel = document.getElementById('adminBulkSelectField') as HTMLSelectElement;
+                      const text = sel ? sel.options[sel.selectedIndex]?.text : 'নির্বাচিত খাত';
+                      handleApplyBulkToAll(Number(bulkCustomInput), text);
+                      setBulkCustomInput('');
+                    }}
+                    className="px-2.5 py-1 bg-amber-400 hover:bg-amber-300 text-stone-950 rounded-lg text-xs font-bold cursor-pointer transition-colors"
+                  >
+                    সেট করুন
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Add New Member Form */}
           {isAddingMember && (
             <form onSubmit={handleCreateMember} className="bg-emerald-50/70 p-5 rounded-2xl border-2 border-emerald-400 space-y-4">
@@ -2234,10 +2433,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                   {/* Monthly Collections */}
                   <div className="p-4 bg-stone-50 rounded-2xl border border-stone-200 space-y-3">
-                    <h5 className="font-bold text-stone-900 text-xs uppercase tracking-wider">মাসিক চাঁদা স্ট্যাটাস (৳)</h5>
-                    <div className="grid grid-cols-3 gap-3">
+                    <h5 className="font-bold text-stone-900 text-xs uppercase tracking-wider">মাসিক চাঁদা ও জরিমানা স্ট্যাটাস (৳)</h5>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div>
-                        <label className="block text-stone-600 text-xs mb-1">আগস্ট ২০২৫</label>
+                        <label className="block text-stone-600 text-xs mb-1 font-bold">আগস্ট ২০২৫</label>
                         <input
                           type="number"
                           placeholder="বাকি থাকলে খালি"
@@ -2245,9 +2444,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           onChange={(e) => setEditingMember({ ...editingMember, august: e.target.value ? Number(e.target.value) : null })}
                           className="w-full p-2 rounded-lg border border-stone-300 font-mono font-bold text-emerald-900"
                         />
+                        <div className="flex gap-1 mt-1 text-[10px]">
+                          <button type="button" onClick={() => setEditingMember({ ...editingMember, august: 2000 })} className="px-1.5 py-0.5 bg-stone-100 hover:bg-stone-200 rounded font-mono font-bold">২০০০</button>
+                          <button type="button" onClick={() => setEditingMember({ ...editingMember, august: 2500 })} className="px-1.5 py-0.5 bg-emerald-100 text-emerald-900 hover:bg-emerald-200 rounded font-mono font-bold">২৫০০</button>
+                          <button type="button" onClick={() => setEditingMember({ ...editingMember, august: 3000 })} className="px-1.5 py-0.5 bg-sky-100 text-sky-900 hover:bg-sky-200 rounded font-mono font-bold">৩০০০</button>
+                          <button type="button" onClick={() => setEditingMember({ ...editingMember, august: null })} className="px-1.5 py-0.5 bg-red-100 text-red-900 hover:bg-red-200 rounded font-bold">০ (বাকি)</button>
+                        </div>
                       </div>
                       <div>
-                        <label className="block text-stone-600 text-xs mb-1">সেপ্টেম্বর ২০২৫</label>
+                        <label className="block text-stone-600 text-xs mb-1 font-bold">সেপ্টেম্বর ২০২৫</label>
                         <input
                           type="number"
                           placeholder="বাকি থাকলে খালি"
@@ -2255,15 +2460,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           onChange={(e) => setEditingMember({ ...editingMember, september: e.target.value ? Number(e.target.value) : null })}
                           className="w-full p-2 rounded-lg border border-stone-300 font-mono font-bold text-emerald-900"
                         />
+                        <div className="flex gap-1 mt-1 text-[10px]">
+                          <button type="button" onClick={() => setEditingMember({ ...editingMember, september: 2000 })} className="px-1.5 py-0.5 bg-stone-100 hover:bg-stone-200 rounded font-mono font-bold">২০০০</button>
+                          <button type="button" onClick={() => setEditingMember({ ...editingMember, september: 2500 })} className="px-1.5 py-0.5 bg-emerald-100 text-emerald-900 hover:bg-emerald-200 rounded font-mono font-bold">২৫০০</button>
+                          <button type="button" onClick={() => setEditingMember({ ...editingMember, september: 3000 })} className="px-1.5 py-0.5 bg-sky-100 text-sky-900 hover:bg-sky-200 rounded font-mono font-bold">৩০০০</button>
+                          <button type="button" onClick={() => setEditingMember({ ...editingMember, september: null })} className="px-1.5 py-0.5 bg-red-100 text-red-900 hover:bg-red-200 rounded font-bold">০ (বাকি)</button>
+                        </div>
                       </div>
                       <div>
-                        <label className="block text-stone-600 text-xs mb-1">জরিমানা (যদি থাকে)</label>
+                        <label className="block text-stone-600 text-xs mb-1 font-bold">জরিমানা (যদি থাকে)</label>
                         <input
                           type="number"
                           value={editingMember.fine || 0}
                           onChange={(e) => setEditingMember({ ...editingMember, fine: Number(e.target.value) })}
                           className="w-full p-2 rounded-lg border border-stone-300 font-mono text-red-700"
                         />
+                        <div className="flex gap-1 mt-1 text-[10px]">
+                          <button type="button" onClick={() => setEditingMember({ ...editingMember, fine: 50 })} className="px-1.5 py-0.5 bg-red-50 text-red-900 hover:bg-red-100 rounded font-mono">৫০</button>
+                          <button type="button" onClick={() => setEditingMember({ ...editingMember, fine: 100 })} className="px-1.5 py-0.5 bg-red-50 text-red-900 hover:bg-red-100 rounded font-mono">১০০</button>
+                          <button type="button" onClick={() => setEditingMember({ ...editingMember, fine: 0 })} className="px-1.5 py-0.5 bg-stone-100 hover:bg-stone-200 rounded font-mono">০</button>
+                        </div>
                       </div>
                     </div>
                   </div>

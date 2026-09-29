@@ -1275,6 +1275,13 @@ export const YearChartPage: React.FC<YearChartPageProps> = ({
                     <>
                       <button
                         type="button"
+                        onClick={() => setCellInputAmount('2000')}
+                        className="p-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 rounded-xl font-bold font-mono transition-colors cursor-pointer"
+                      >
+                        ২০০০
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => setCellInputAmount('2500')}
                         className="p-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 rounded-xl font-bold font-mono transition-colors cursor-pointer"
                       >
@@ -1286,13 +1293,6 @@ export const YearChartPage: React.FC<YearChartPageProps> = ({
                         className="p-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 rounded-xl font-bold font-mono transition-colors cursor-pointer"
                       >
                         ৩০০০
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setCellInputAmount('5000')}
-                        className="p-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 rounded-xl font-bold font-mono transition-colors cursor-pointer"
-                      >
-                        ৫০০০
                       </button>
                       <button
                         type="button"
@@ -1452,12 +1452,34 @@ export const YearChartPage: React.FC<YearChartPageProps> = ({
                       type="button"
                       onClick={() => {
                         const updated: Record<string, number | null> = {};
+                        data.members.forEach(m => updated[m.id] = 2000);
+                        setBulkAmounts(updated);
+                      }}
+                      className="px-2.5 py-1 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg text-xs font-bold cursor-pointer"
+                    >
+                      সবাইকে ২০০০ করুন
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updated: Record<string, number | null> = {};
                         data.members.forEach(m => updated[m.id] = 2500);
                         setBulkAmounts(updated);
                       }}
                       className="px-2.5 py-1 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg text-xs font-bold cursor-pointer"
                     >
                       সবাইকে ২৫০০ করুন
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updated: Record<string, number | null> = {};
+                        data.members.forEach(m => updated[m.id] = 3000);
+                        setBulkAmounts(updated);
+                      }}
+                      className="px-2.5 py-1 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg text-xs font-bold cursor-pointer"
+                    >
+                      সবাইকে ৩০০০ করুন
                     </button>
                     <button
                       type="button"
@@ -1470,6 +1492,28 @@ export const YearChartPage: React.FC<YearChartPageProps> = ({
                     >
                       সবাইকে বাকি (০) করুন
                     </button>
+                    {/* কাস্টম টাকা সবাইকে দিন */}
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        placeholder="কাস্টম টাকা"
+                        id="customBulkFeeInput"
+                        className="w-24 px-2 py-1 text-xs border border-emerald-300 rounded-lg bg-white font-mono font-bold"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const input = document.getElementById('customBulkFeeInput') as HTMLInputElement;
+                          const val = input?.value ? Number(input.value) : 0;
+                          const updated: Record<string, number | null> = {};
+                          data.members.forEach(m => updated[m.id] = val);
+                          setBulkAmounts(updated);
+                        }}
+                        className="px-2.5 py-1 bg-stone-800 hover:bg-stone-900 text-amber-300 rounded-lg text-xs font-bold cursor-pointer"
+                      >
+                        সবাইকে দিন
+                      </button>
+                    </div>
                   </>
                 )}
               </div>

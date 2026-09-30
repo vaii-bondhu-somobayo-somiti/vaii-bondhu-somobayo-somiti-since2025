@@ -15,16 +15,18 @@ import {
   Ban, 
   ShieldCheck, 
   Share2,
-  FileCheck2
+  FileCheck2,
+  ArrowLeft
 } from 'lucide-react';
 
 interface RulesPageProps {
   rules?: SocietyRule[];
   data?: SocietyData;
+  onNavigate?: (tab: string) => void;
   onOpenDocsModal: (tab?: 'rules' | 'ledger' | 'committee' | 'logo') => void;
 }
 
-export const RulesPage: React.FC<RulesPageProps> = ({ rules, data, onOpenDocsModal }) => {
+export const RulesPage: React.FC<RulesPageProps> = ({ rules, data, onNavigate, onOpenDocsModal }) => {
   const [copiedAll, setCopiedAll] = useState(false);
   const [copiedRuleId, setCopiedRuleId] = useState<number | null>(null);
 
@@ -50,8 +52,26 @@ export const RulesPage: React.FC<RulesPageProps> = ({ rules, data, onOpenDocsMod
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-6 sm:space-y-10">
       
+      {/* Mobile Back / Quick Breadcrumb Button */}
+      <div className="flex items-center justify-between lg:hidden pb-1 -mt-2">
+        <button
+          onClick={() => {
+            if (window.history.length > 1) {
+              window.history.back();
+            } else if (onNavigate) {
+              onNavigate('home');
+            }
+          }}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-stone-200 text-stone-700 hover:text-emerald-800 text-xs font-bold shadow-2xs active:scale-95 transition-all cursor-pointer"
+        >
+          <ArrowLeft className="w-4 h-4 text-emerald-700" />
+          <span>হোমে ফিরে যান</span>
+        </button>
+        <span className="text-[11px] font-bold text-stone-500">হোম / নিয়ম নীতিমালা</span>
+      </div>
+
       {/* Header Banner */}
       <div className="text-center space-y-3">
         <div className="inline-flex items-center gap-2 bg-emerald-100 text-emerald-900 border border-emerald-300 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">

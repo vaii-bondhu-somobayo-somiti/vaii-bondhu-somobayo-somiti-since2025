@@ -12,15 +12,17 @@ import {
   Clock, 
   FileText, 
   HelpCircle,
-  AlertCircle
+  AlertCircle,
+  ArrowLeft
 } from 'lucide-react';
 
 interface PaymentPageProps {
   data: SocietyData;
   onPaymentSubmitted: (updatedData: SocietyData) => void;
+  onNavigate?: (tab: string) => void;
 }
 
-export const PaymentPage: React.FC<PaymentPageProps> = ({ data, onPaymentSubmitted }) => {
+export const PaymentPage: React.FC<PaymentPageProps> = ({ data, onPaymentSubmitted, onNavigate }) => {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   // Form states
@@ -138,8 +140,26 @@ export const PaymentPage: React.FC<PaymentPageProps> = ({ data, onPaymentSubmitt
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-6 sm:space-y-10">
       
+      {/* Mobile Back / Quick Breadcrumb Button */}
+      <div className="flex items-center justify-between lg:hidden pb-1 -mt-2">
+        <button
+          onClick={() => {
+            if (window.history.length > 1) {
+              window.history.back();
+            } else if (onNavigate) {
+              onNavigate('home');
+            }
+          }}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-stone-200 text-stone-700 hover:text-emerald-800 text-xs font-bold shadow-2xs active:scale-95 transition-all cursor-pointer"
+        >
+          <ArrowLeft className="w-4 h-4 text-emerald-700" />
+          <span>হোমে ফিরে যান</span>
+        </button>
+        <span className="text-[11px] font-bold text-stone-500">হোম / পেমেন্ট পোর্টাল</span>
+      </div>
+
       {/* Page Title */}
       <div className="text-center space-y-2 max-w-2xl mx-auto">
         <div className="inline-flex items-center gap-2 bg-emerald-100 text-emerald-900 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">

@@ -13,16 +13,18 @@ import {
   Check, 
   ShieldCheck, 
   FileCheck2,
-  Users
+  Users,
+  ArrowLeft
 } from 'lucide-react';
 
 interface CommitteePageProps {
   committee?: CommitteeMember[];
   data?: SocietyData;
+  onNavigate?: (tab: string) => void;
   onOpenDocsModal: (tab?: 'rules' | 'ledger' | 'committee' | 'logo') => void;
 }
 
-export const CommitteePage: React.FC<CommitteePageProps> = ({ committee, data, onOpenDocsModal }) => {
+export const CommitteePage: React.FC<CommitteePageProps> = ({ committee, data, onNavigate, onOpenDocsModal }) => {
   const [copiedId, setCopiedId] = React.useState<string | null>(null);
 
   const activeCommittee = committee && committee.length > 0 ? committee : (data?.committee && data.committee.length > 0 ? data.committee : COMMITTEE_MEMBERS);
@@ -56,8 +58,26 @@ export const CommitteePage: React.FC<CommitteePageProps> = ({ committee, data, o
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-6 sm:space-y-10">
       
+      {/* Mobile Back / Quick Breadcrumb Button */}
+      <div className="flex items-center justify-between lg:hidden pb-1 -mt-2">
+        <button
+          onClick={() => {
+            if (window.history.length > 1) {
+              window.history.back();
+            } else if (onNavigate) {
+              onNavigate('home');
+            }
+          }}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-stone-200 text-stone-700 hover:text-emerald-800 text-xs font-bold shadow-2xs active:scale-95 transition-all cursor-pointer"
+        >
+          <ArrowLeft className="w-4 h-4 text-emerald-700" />
+          <span>হোমে ফিরে যান</span>
+        </button>
+        <span className="text-[11px] font-bold text-stone-500">হোম / কমিটি তালিকা</span>
+      </div>
+
       {/* Banner matching the Committee poster */}
       <div className="relative overflow-hidden bg-gradient-to-r from-emerald-900 via-emerald-800 to-emerald-950 text-white p-8 sm:p-12 rounded-3xl shadow-2xl border-4 border-amber-400 text-center space-y-4">
         <div className="inline-flex items-center gap-2 bg-amber-400/20 text-amber-300 border border-amber-400/40 text-xs sm:text-sm font-bold px-4 py-1 rounded-full uppercase tracking-wider">

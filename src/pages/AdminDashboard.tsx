@@ -10,6 +10,12 @@ import {
   toBengaliNumber,
   getLastSavedTime
 } from '../utils/storage';
+import { 
+  MONTHS_NAME_MAP, 
+  getMemberMonthPayment, 
+  calculateMemberYearTotal, 
+  calculateMemberAllTotal 
+} from './MemberList';
 import { saveSocietyCloudData, fetchSocietyCloudData } from '../firebase';
 import { compressAndReadFile } from '../utils/imageHelper';
 import { SOCIETY_RULES, COMMITTEE_MEMBERS } from '../data/initialData';
@@ -466,9 +472,54 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     notes: ''
   });
 
-  // Bulk Fast Fee Update State
-  const [bulkTargetField, setBulkTargetField] = useState<string>('09');
+  // Auto-detect running calendar month (e.g. '09' for September)
+  const currentCalendarMonthKey = String(new Date().getMonth() + 1).padStart(2, '0');
+  const defaultBulkTarget = `${currentCalendarMonthKey}_2026`; // e.g. '09_2026' for September 2026
+
+  // Bulk Fast Fee Update State - DEFAULT TO RUNNING 2026 MONTH!
+  const [bulkTargetField, setBulkTargetField] = useState<string>(defaultBulkTarget);
   const [bulkCustomInput, setBulkCustomInput] = useState<string>('');
+
+  // Admin Members Table View Year & Month state - DEFAULT TO 2026 RUNNING MONTH!
+  const [adminMemberYear, setAdminMemberYear] = useState<2025 | 2026>(2026);
+  const [adminMemberMonth, setAdminMemberMonth] = useState<string>(currentCalendarMonthKey);
+
+  const handleQuickUpdateMemberPayment = (memberId: string, yr: number, monthKey: string, amount: number | null) => {
+    const updatedMembers = data.members.map((m) => {
+      if (m.id !== memberId) return m;
+
+      if (yr === 2026) {
+        return {
+          ...m,
+          payments2026: {
+            ...(m.payments2026 || {}),
+            [monthKey]: amount
+          }
+        };
+      } else {
+        return {
+          ...m,
+          payments2025: {
+            ...(m.payments2025 || {}),
+            [monthKey]: amount
+          },
+          august: monthKey === '08' ? amount : m.august,
+          september: monthKey === '09' ? amount : m.september,
+          october: monthKey === '10' ? amount : m.october
+        };
+      }
+    });
+
+    const updated: SocietyData = {
+      ...data,
+      members: updatedMembers,
+      lastUpdated: new Date().toISOString()
+    };
+
+    saveStoredData(updated);
+    onDataUpdated(updated);
+    showNotification('success', `সদস্যের হিসাব তাৎক্ষণিক আপডেট করা হয়েছে!`);
+  };
 
   const handleApplyBulkToAll = (amount: number | null, fieldName: string) => {
     const amtStr = amount !== null && amount > 0 ? `${amount} ৳` : '০ ৳ (বাকি)';
@@ -1984,7 +2035,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   className="bg-stone-800 border-2 border-emerald-500 text-white rounded-xl px-3 py-2 text-xs font-bold outline-hidden cursor-pointer"
                   id="adminBulkSelectField"
                 >
-                  <optgroup label="২০২৫ সালের হিসাব">
+                  <optgroup label="✨ ২০২৬ সালের হিসাব (চলতি বছর)">
+                    <option value="09_2026">সেপ্টেম্বর ২০২৬ মাসিক চাঁদা (চলতি মাস)</option>
+                    <option value="01_2026">জানুয়ারি ২০২৬ মাসিক চাঁদা</option>
+                    <option value="02_2026">ফেব্রুয়ারি ২০২৬ মাসিক চাঁদা</option>
+                    <option value="03_2026">মার্চ ২০২৬ মাসিক চাঁদা</option>
+                    <option value="04_2026">এপ্রিল ২০২৬ মাসিক চাঁদা</option>
+                    <option value="05_2026">মে ২০২৬ মাসিক চাঁদা</option>
+                    <option value="06_2026">জুন ২০২৬ মাসিক চাঁদা</option>
+                    <option value="07_2026">জুলাই ২০২৬ মাসিক চাঁদা</option>
+                    <option value="08_2026">আগস্ট ২০২৬ মাসিক চাঁদা</option>
+                    <option value="10_2026">অক্টোবর ২০২৬ মাসিক চাঁদা</option>
+                    <option value="11_2026">নভেম্বর ২০২৬ মাসিক চাঁদা</option>
+                    <option value="12_2026">ডিসেম্বর ২০২৬ মাসিক চাঁদা</option>
+                    <option value="dp1_2026">১ম ৬ মাস ডাউন পেমেন্ট (২০২৬)</option>
+                    <option value="dp2_2026">২য় ৬ মাস ডাউন পেমেন্ট (২০২৬)</option>
+                    <option value="fine_2026">বিলম্ব জরিমানা (২০২৬)</option>
+                  </optgroup>
+                  <optgroup label="২০২৫ সালের হিসাব (বিগত বছর)">
                     <option value="08">আগস্ট ২০২৫ মাসিক চাঁদা</option>
                     <option value="09">সেপ্টেম্বর ২০২৫ মাসিক চাঁদা</option>
                     <option value="10">অক্টোবর ২০২৫ মাসিক চাঁদা</option>
@@ -1993,14 +2061,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <option value="dp1_2025">১ম ৬ মাস ডাউন পেমেন্ট (২০২৫)</option>
                     <option value="dp2_2025">২য় ৬ মাস ডাউন পেমেন্ট (২০২৫)</option>
                     <option value="fine_2025">বিলম্ব জরিমানা (২০২৫)</option>
-                  </optgroup>
-                  <optgroup label="২০২৬ সালের হিসাব (চলমান)">
-                    <option value="01_2026">জানুয়ারি ২০২৬ মাসিক চাঁদা</option>
-                    <option value="02_2026">ফেব্রুয়ারি ২০২৬ মাসিক চাঁদা</option>
-                    <option value="03_2026">মার্চ ২০২৬ মাসিক চাঁদা</option>
-                    <option value="dp1_2026">১ম ৬ মাস ডাউন পেমেন্ট (২০২৬)</option>
-                    <option value="dp2_2026">২য় ৬ মাস ডাউন পেমেন্ট (২০২৬)</option>
-                    <option value="fine_2026">বিলম্ব জরিমানা (২০২৬)</option>
                   </optgroup>
                 </select>
               </div>
@@ -2206,6 +2266,79 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </form>
           )}
 
+          {/* Members Table Controls: Year Switcher & Month Selector */}
+          <div className="bg-stone-100 p-3 sm:p-4 rounded-2xl border border-stone-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-stone-700">প্রদর্শিত বছর:</span>
+              <div className="bg-white p-1 rounded-xl border border-stone-300 flex items-center shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAdminMemberYear(2026);
+                    setAdminMemberMonth(currentCalendarMonthKey);
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                    adminMemberYear === 2026
+                      ? 'bg-emerald-800 text-white shadow-xs'
+                      : 'text-stone-600 hover:text-stone-900'
+                  }`}
+                >
+                  <TrendingUp className="w-3.5 h-3.5 text-amber-300" />
+                  ২০২৬ (চলতি বছর)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAdminMemberYear(2025);
+                    setAdminMemberMonth('09');
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    adminMemberYear === 2025
+                      ? 'bg-emerald-800 text-white shadow-xs'
+                      : 'text-stone-600 hover:text-stone-900'
+                  }`}
+                >
+                  <Calendar className="w-3.5 h-3.5" />
+                  ২০২৫ (বিগত)
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-stone-700">মাস নির্বাচন:</span>
+              <select
+                value={adminMemberMonth}
+                onChange={(e) => setAdminMemberMonth(e.target.value)}
+                className="bg-white border border-stone-300 rounded-xl px-3 py-1.5 text-xs font-bold text-stone-900 outline-none cursor-pointer focus:border-emerald-600 shadow-2xs"
+              >
+                {adminMemberYear === 2026 ? (
+                  <>
+                    <option value="09">সেপ্টেম্বর ২০২৬ (চলতি মাস)</option>
+                    <option value="01">জানুয়ারি ২০২৬</option>
+                    <option value="02">ফেব্রুয়ারি ২০২৬</option>
+                    <option value="03">মার্চ ২০২৬</option>
+                    <option value="04">এপ্রিল ২০২৬</option>
+                    <option value="05">মে ২০২৬</option>
+                    <option value="06">জুন ২০২৬</option>
+                    <option value="07">জুলাই ২০২৬</option>
+                    <option value="08">আগস্ট ২০২৬</option>
+                    <option value="10">অক্টোবর ২০২৬</option>
+                    <option value="11">নভেম্বর ২০২৬</option>
+                    <option value="12">ডিসেম্বর ২০২৬</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="08">আগস্ট ২০২৫</option>
+                    <option value="09">সেপ্টেম্বর ২০২৫</option>
+                    <option value="10">অক্টোবর ২০২৫</option>
+                    <option value="11">নভেম্বর ২০২৫</option>
+                    <option value="12">ডিসেম্বর ২০২৫</option>
+                  </>
+                )}
+              </select>
+            </div>
+          </div>
+
           {/* Members Table */}
           <div className="overflow-x-auto border border-stone-200 rounded-2xl">
             <table className="w-full text-left text-xs sm:text-sm">
@@ -2215,15 +2348,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <th className="py-3 px-3">মেম্বার আইডি</th>
                   <th className="py-3 px-3">নাম</th>
                   <th className="py-3 px-3">মোবাইল</th>
-                  <th className="py-3 px-3 text-center">আগস্ট</th>
-                  <th className="py-3 px-3 text-center">সেপ্টেম্বর</th>
-                  <th className="py-3 px-3 text-right">মোট জমা</th>
+                  <th className="py-3 px-3 text-center">
+                    {MONTHS_NAME_MAP[adminMemberMonth] || adminMemberMonth} {toBengaliNumber(adminMemberYear)} স্ট্যাটাস
+                  </th>
+                  <th className="py-3 px-3 text-center">তাৎক্ষণিক জমা আপডেট</th>
+                  <th className="py-3 px-3 text-right">{toBengaliNumber(adminMemberYear)} জমা</th>
+                  <th className="py-3 px-3 text-right">সর্বমোট জমা</th>
                   <th className="py-3 px-3 text-center">অ্যাকশন</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100">
                 {data.members.map((m) => {
-                  const total = (m.august || 0) + (m.september || 0) + (m.october || 0) + (m.downPayment || 0);
+                  const paymentAmt = getMemberMonthPayment(m, adminMemberYear, adminMemberMonth);
+                  const isPaid = paymentAmt !== null && Number(paymentAmt) > 0;
+                  const yearTotal = calculateMemberYearTotal(m, adminMemberYear);
+                  const allTotal = calculateMemberAllTotal(m);
+
                   return (
                     <tr key={m.id} className="hover:bg-emerald-50/40 transition-colors">
                       <td className="py-2.5 px-3 text-center font-bold text-stone-500">
@@ -2253,36 +2393,57 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         {m.phone}
                       </td>
                       <td className="py-2.5 px-3 text-center">
-                        {m.august ? (
-                          <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[11px]">
-                            {toBengaliNumber(m.august)}
+                        {isPaid ? (
+                          <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-bold text-xs border border-emerald-300 inline-flex items-center gap-1">
+                            <Check className="w-3 h-3 text-emerald-600" />
+                            Paid ({toBengaliNumber(paymentAmt)} ৳)
                           </span>
                         ) : (
-                          <span className="px-2 py-0.5 rounded bg-red-100 text-red-700 font-bold text-[11px]">
-                            বাকি
+                          <span className="px-2.5 py-1 rounded-full bg-red-100 text-red-700 font-bold text-xs border border-red-300">
+                            Due (বাকি)
                           </span>
                         )}
                       </td>
                       <td className="py-2.5 px-3 text-center">
-                        {m.september ? (
-                          <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[11px]">
-                            {toBengaliNumber(m.september)}
-                          </span>
-                        ) : (
-                          <span className="px-2 py-0.5 rounded bg-red-100 text-red-700 font-bold text-[11px]">
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleQuickUpdateMemberPayment(m.id, adminMemberYear, adminMemberMonth, 2500)}
+                            className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 rounded-lg text-[11px] font-mono font-bold cursor-pointer transition-all active:scale-95"
+                            title="২৫০০ টাকা সেট করুন"
+                          >
+                            ২৫০০
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleQuickUpdateMemberPayment(m.id, adminMemberYear, adminMemberMonth, 2000)}
+                            className="px-2 py-1 bg-stone-100 hover:bg-stone-200 text-stone-800 border border-stone-300 rounded-lg text-[11px] font-mono font-bold cursor-pointer transition-all active:scale-95"
+                            title="২০০০ টাকা সেট করুন"
+                          >
+                            ২০০০
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleQuickUpdateMemberPayment(m.id, adminMemberYear, adminMemberMonth, null)}
+                            className="px-2 py-1 bg-red-50 hover:bg-red-100 text-red-800 border border-red-200 rounded-lg text-[11px] font-bold cursor-pointer transition-all active:scale-95"
+                            title="বাকি (০) সেট করুন"
+                          >
                             বাকি
-                          </span>
-                        )}
+                          </button>
+                        </div>
                       </td>
                       <td className="py-2.5 px-3 text-right font-bold text-emerald-950 font-mono">
-                        {formatCurrency(total)}
+                        {formatCurrency(yearTotal)}
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-black text-stone-900 font-mono">
+                        {formatCurrency(allTotal)}
                       </td>
                       <td className="py-2.5 px-3 text-center">
                         <div className="flex items-center justify-center gap-1.5">
                           <button
                             onClick={() => setEditingMember({ ...m })}
                             className="p-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer"
-                            title="এডিট করুন"
+                            title="পূর্ণাঙ্গ হিসাব এডিট করুন"
                           >
                             <Edit3 className="w-3.5 h-3.5" />
                           </button>
@@ -2431,10 +2592,133 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </div>
                   </div>
 
-                  {/* Monthly Collections */}
-                  <div className="p-4 bg-stone-50 rounded-2xl border border-stone-200 space-y-3">
-                    <h5 className="font-bold text-stone-900 text-xs uppercase tracking-wider">মাসিক চাঁদা ও জরিমানা স্ট্যাটাস (৳)</h5>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {/* 2026 Collections (Current Year) */}
+                  <div className="p-4 bg-emerald-50/70 rounded-2xl border-2 border-emerald-300 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h5 className="font-black text-emerald-950 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                        <TrendingUp className="w-3.5 h-3.5 text-emerald-700" />
+                        ২০২৬ সালের হিসাব (চলতি বছর)
+                      </h5>
+                      <span className="text-[10px] font-bold bg-amber-400 text-emerald-950 px-2 py-0.5 rounded-full">
+                        রানিং বছর
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {[
+                        { key: '09', name: 'সেপ্টেম্বর ২০২৬ (চলতি মাস)', isRunning: true },
+                        { key: '01', name: 'জানুয়ারি ২০২৬' },
+                        { key: '02', name: 'ফেব্রুয়ারি ২০২৬' },
+                        { key: '03', name: 'মার্চ ২০২৬' },
+                        { key: '04', name: 'এপ্রিল ২০২৬' },
+                        { key: '05', name: 'মে ২০২৬' },
+                        { key: '06', name: 'জুন ২০২৬' },
+                        { key: '07', name: 'জুলাই ২০২৬' },
+                        { key: '08', name: 'আগস্ট ২০২৬' },
+                        { key: '10', name: 'অক্টোবর ২০২৬' },
+                        { key: '11', name: 'নভেম্বর ২০২৬' },
+                        { key: '12', name: 'ডিসেম্বর ২০২৬' }
+                      ].map((mo) => {
+                        const curVal = editingMember.payments2026?.[mo.key] ?? '';
+                        return (
+                          <div key={mo.key} className={`p-2.5 rounded-xl border ${mo.isRunning ? 'bg-amber-50/80 border-amber-300 ring-1 ring-amber-400' : 'bg-white border-stone-200'}`}>
+                            <label className="block text-stone-700 text-xs mb-1 font-bold">
+                              {mo.name}
+                            </label>
+                            <input
+                              type="number"
+                              placeholder="বাকি থাকলে খালি"
+                              value={curVal}
+                              onChange={(e) => {
+                                const val = e.target.value ? Number(e.target.value) : null;
+                                setEditingMember({
+                                  ...editingMember,
+                                  payments2026: {
+                                    ...(editingMember.payments2026 || {}),
+                                    [mo.key]: val
+                                  }
+                                });
+                              }}
+                              className="w-full p-2 rounded-lg border border-stone-300 font-mono font-bold text-emerald-900 bg-white"
+                            />
+                            <div className="flex gap-1 mt-1 text-[10px]">
+                              <button
+                                type="button"
+                                onClick={() => setEditingMember({
+                                  ...editingMember,
+                                  payments2026: { ...(editingMember.payments2026 || {}), [mo.key]: 2500 }
+                                })}
+                                className="px-1.5 py-0.5 bg-emerald-100 text-emerald-900 hover:bg-emerald-200 rounded font-mono font-bold cursor-pointer"
+                              >
+                                ২৫০০
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditingMember({
+                                  ...editingMember,
+                                  payments2026: { ...(editingMember.payments2026 || {}), [mo.key]: 2000 }
+                                })}
+                                className="px-1.5 py-0.5 bg-stone-100 hover:bg-stone-200 rounded font-mono font-bold cursor-pointer"
+                              >
+                                ২০০০
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditingMember({
+                                  ...editingMember,
+                                  payments2026: { ...(editingMember.payments2026 || {}), [mo.key]: null }
+                                })}
+                                className="px-1.5 py-0.5 bg-red-100 text-red-900 hover:bg-red-200 rounded font-bold cursor-pointer"
+                              >
+                                ০ (বাকি)
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-emerald-200">
+                      <div>
+                        <label className="block text-stone-700 text-xs mb-1 font-bold">১ম ৬ মাস ডিপি (২০২৬)</label>
+                        <input
+                          type="number"
+                          value={editingMember.downPayment2026_1 || 0}
+                          onChange={(e) => setEditingMember({ ...editingMember, downPayment2026_1: Number(e.target.value) })}
+                          className="w-full p-2 rounded-lg border border-stone-300 font-mono bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-stone-700 text-xs mb-1 font-bold">২য় ৬ মাস ডিপি (২০২৬)</label>
+                        <input
+                          type="number"
+                          value={editingMember.downPayment2026_2 || 0}
+                          onChange={(e) => setEditingMember({ ...editingMember, downPayment2026_2: Number(e.target.value) })}
+                          className="w-full p-2 rounded-lg border border-stone-300 font-mono bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-stone-700 text-xs mb-1 font-bold">জরিমানা (২০২৬)</label>
+                        <input
+                          type="number"
+                          value={editingMember.fine2026 || 0}
+                          onChange={(e) => setEditingMember({ ...editingMember, fine2026: Number(e.target.value) })}
+                          className="w-full p-2 rounded-lg border border-stone-300 font-mono text-red-700 bg-white"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 2025 Collections (Past Year) */}
+                  <details className="p-3 bg-stone-50 rounded-2xl border border-stone-200 group">
+                    <summary className="font-bold text-stone-700 text-xs uppercase tracking-wider cursor-pointer flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5 text-stone-500" />
+                        ২০২৫ সালের হিসাব (বিগত বছর দেখতে বা সংশোধন করতে ক্লিক করুন)
+                      </span>
+                      <span className="text-[11px] text-emerald-800 group-open:rotate-180 transition-transform">▼</span>
+                    </summary>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3">
                       <div>
                         <label className="block text-stone-600 text-xs mb-1 font-bold">আগস্ট ২০২৫</label>
                         <input
@@ -2442,14 +2726,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           placeholder="বাকি থাকলে খালি"
                           value={editingMember.august ?? ''}
                           onChange={(e) => setEditingMember({ ...editingMember, august: e.target.value ? Number(e.target.value) : null })}
-                          className="w-full p-2 rounded-lg border border-stone-300 font-mono font-bold text-emerald-900"
+                          className="w-full p-2 rounded-lg border border-stone-300 font-mono font-bold text-emerald-900 bg-white"
                         />
-                        <div className="flex gap-1 mt-1 text-[10px]">
-                          <button type="button" onClick={() => setEditingMember({ ...editingMember, august: 2000 })} className="px-1.5 py-0.5 bg-stone-100 hover:bg-stone-200 rounded font-mono font-bold">২০০০</button>
-                          <button type="button" onClick={() => setEditingMember({ ...editingMember, august: 2500 })} className="px-1.5 py-0.5 bg-emerald-100 text-emerald-900 hover:bg-emerald-200 rounded font-mono font-bold">২৫০০</button>
-                          <button type="button" onClick={() => setEditingMember({ ...editingMember, august: 3000 })} className="px-1.5 py-0.5 bg-sky-100 text-sky-900 hover:bg-sky-200 rounded font-mono font-bold">৩০০০</button>
-                          <button type="button" onClick={() => setEditingMember({ ...editingMember, august: null })} className="px-1.5 py-0.5 bg-red-100 text-red-900 hover:bg-red-200 rounded font-bold">০ (বাকি)</button>
-                        </div>
                       </div>
                       <div>
                         <label className="block text-stone-600 text-xs mb-1 font-bold">সেপ্টেম্বর ২০২৫</label>
@@ -2458,31 +2736,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           placeholder="বাকি থাকলে খালি"
                           value={editingMember.september ?? ''}
                           onChange={(e) => setEditingMember({ ...editingMember, september: e.target.value ? Number(e.target.value) : null })}
-                          className="w-full p-2 rounded-lg border border-stone-300 font-mono font-bold text-emerald-900"
+                          className="w-full p-2 rounded-lg border border-stone-300 font-mono font-bold text-emerald-900 bg-white"
                         />
-                        <div className="flex gap-1 mt-1 text-[10px]">
-                          <button type="button" onClick={() => setEditingMember({ ...editingMember, september: 2000 })} className="px-1.5 py-0.5 bg-stone-100 hover:bg-stone-200 rounded font-mono font-bold">২০০০</button>
-                          <button type="button" onClick={() => setEditingMember({ ...editingMember, september: 2500 })} className="px-1.5 py-0.5 bg-emerald-100 text-emerald-900 hover:bg-emerald-200 rounded font-mono font-bold">২৫০০</button>
-                          <button type="button" onClick={() => setEditingMember({ ...editingMember, september: 3000 })} className="px-1.5 py-0.5 bg-sky-100 text-sky-900 hover:bg-sky-200 rounded font-mono font-bold">৩০০০</button>
-                          <button type="button" onClick={() => setEditingMember({ ...editingMember, september: null })} className="px-1.5 py-0.5 bg-red-100 text-red-900 hover:bg-red-200 rounded font-bold">০ (বাকি)</button>
-                        </div>
                       </div>
                       <div>
-                        <label className="block text-stone-600 text-xs mb-1 font-bold">জরিমানা (যদি থাকে)</label>
+                        <label className="block text-stone-600 text-xs mb-1 font-bold">জরিমানা (২০২৫)</label>
                         <input
                           type="number"
                           value={editingMember.fine || 0}
-                          onChange={(e) => setEditingMember({ ...editingMember, fine: Number(e.target.value) })}
-                          className="w-full p-2 rounded-lg border border-stone-300 font-mono text-red-700"
+                          onChange={(e) => setEditingMember({ ...editingMember, fine: Number(e.target.value), fine2025: Number(e.target.value) })}
+                          className="w-full p-2 rounded-lg border border-stone-300 font-mono text-red-700 bg-white"
                         />
-                        <div className="flex gap-1 mt-1 text-[10px]">
-                          <button type="button" onClick={() => setEditingMember({ ...editingMember, fine: 50 })} className="px-1.5 py-0.5 bg-red-50 text-red-900 hover:bg-red-100 rounded font-mono">৫০</button>
-                          <button type="button" onClick={() => setEditingMember({ ...editingMember, fine: 100 })} className="px-1.5 py-0.5 bg-red-50 text-red-900 hover:bg-red-100 rounded font-mono">১০০</button>
-                          <button type="button" onClick={() => setEditingMember({ ...editingMember, fine: 0 })} className="px-1.5 py-0.5 bg-stone-100 hover:bg-stone-200 rounded font-mono">০</button>
-                        </div>
                       </div>
                     </div>
-                  </div>
+                  </details>
 
                   <div>
                     <label className="block font-bold text-stone-800 mb-1">মন্তব্য / বিশেষ নোট</label>

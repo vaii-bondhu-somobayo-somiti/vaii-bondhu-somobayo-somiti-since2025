@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Logo } from './Logo';
 import { CurrentUser } from '../types';
 import { 
@@ -36,6 +36,18 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenDocsModal
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Close mobile drawer if phone back button is pressed
+  useEffect(() => {
+    const handleBackPressed = (e: Event) => {
+      if (isMobileMenuOpen) {
+        e.preventDefault(); // Stop outer navigation, close drawer
+        setIsMobileMenuOpen(false);
+      }
+    };
+    window.addEventListener('app_back_pressed', handleBackPressed);
+    return () => window.removeEventListener('app_back_pressed', handleBackPressed);
+  }, [isMobileMenuOpen]);
 
   const navItems = [
     { id: 'home', label: 'হোম', icon: Home },

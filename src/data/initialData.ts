@@ -22,12 +22,12 @@ export const INITIAL_MEMBERS = [
     phone: "98979162",
     role: "সদস্য",
     august: null,
-    september: null,
+    september: 2500,
     october: null,
     fine: 0,
     downPayment: 0,
     joinedDate: "২০২৫-০৮-০১",
-    notes: "আগস্ট ও সেপ্টেম্বর বাকি রয়েছে"
+    notes: "সেপ্টেম্বর চাঁদা পরিশোধিত"
   },
   {
     id: "VB20250003",
@@ -64,12 +64,12 @@ export const INITIAL_MEMBERS = [
     phone: "01880980716",
     role: "ক্যাশিয়ার",
     august: 2500,
-    september: null,
+    september: 2500,
     october: null,
     fine: 0,
     downPayment: 0,
     joinedDate: "২০২৫-০৮-০১",
-    notes: "আগস্ট পরিশোধিত, সেপ্টেম্বর জমা বাকি"
+    notes: "নিয়মিত চাঁদা পরিশোধিত"
   },
   {
     id: "VB20250006",
@@ -78,12 +78,12 @@ export const INITIAL_MEMBERS = [
     phone: "01608421757",
     role: "সহ-সভাপতি",
     august: 2500,
-    september: null,
+    september: 2500,
     october: null,
     fine: 0,
     downPayment: 0,
     joinedDate: "২০২৫-০৮-০১",
-    notes: "আগস্ট পরিশোধিত, সেপ্টেম্বর বাকি"
+    notes: "নিয়মিত চাঁদা পরিশোধিত"
   },
   {
     id: "VB20250007",
@@ -176,12 +176,12 @@ export const INITIAL_MEMBERS = [
     phone: "+60179262294",
     role: "সদস্য",
     august: 2500,
-    september: null,
+    september: 2500,
     october: null,
     fine: 0,
     downPayment: 0,
     joinedDate: "২০২৫-০৮-০১",
-    notes: "মালয়েশিয়া প্রবাসী সদস্য, সেপ্টেম্বর জমা বাকি"
+    notes: "মালয়েশিয়া প্রবাসী সদস্য, চাঁদা পরিশোধিত"
   },
   {
     id: "VB20250014",

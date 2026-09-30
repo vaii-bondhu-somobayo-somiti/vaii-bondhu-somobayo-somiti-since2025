@@ -1,7 +1,7 @@
 import React from 'react';
 import { Logo } from '../components/Logo';
 import { SocietyData } from '../types';
-import { formatCurrency, toBengaliNumber } from '../utils/storage';
+import { formatCurrency, toBengaliNumber, calculateMemberAllTotal } from '../utils/storage';
 import { 
   Users, 
   Landmark, 
@@ -385,7 +385,16 @@ export const HomePage: React.FC<HomePageProps> = ({ data, onNavigate, onOpenDocs
               </thead>
               <tbody className="divide-y divide-stone-100">
                 {data.members.slice(0, 8).map((m) => {
-                  const totalDeposit = (m.august || 0) + (m.september || 0) + (m.october || 0) + (m.downPayment || 0);
+                  const augVal = m.payments2025?.['08'] !== undefined && m.payments2025?.['08'] !== null 
+                    ? m.payments2025['08'] 
+                    : m.august;
+                  const sepVal = m.payments2025?.['09'] !== undefined && m.payments2025?.['09'] !== null 
+                    ? m.payments2025['09'] 
+                    : m.september;
+                  const isAugPaid = augVal !== null && Number(augVal) > 0;
+                  const isSepPaid = sepVal !== null && Number(sepVal) > 0;
+                  const totalDeposit = calculateMemberAllTotal(m);
+
                   return (
                     <tr key={m.id} className="hover:bg-emerald-50/40 transition-colors">
                       <td className="py-3 px-4 text-center font-bold text-stone-500">
@@ -403,28 +412,28 @@ export const HomePage: React.FC<HomePageProps> = ({ data, onNavigate, onOpenDocs
                         </span>
                       </td>
                       <td className="py-3 px-4 text-center">
-                        {m.august ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-bold text-xs">
-                            {toBengaliNumber(m.august)} ৳
+                        {isAugPaid ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-bold text-xs">
+                            {toBengaliNumber(augVal)} ৳
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-red-100 text-red-700 font-bold text-xs">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-red-100 text-red-700 font-bold text-xs">
                             বাকি
                           </span>
                         )}
                       </td>
                       <td className="py-3 px-4 text-center">
-                        {m.september ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-bold text-xs">
-                            {toBengaliNumber(m.september)} ৳
+                        {isSepPaid ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-bold text-xs">
+                            {toBengaliNumber(sepVal)} ৳
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-red-100 text-red-700 font-bold text-xs">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-red-100 text-red-700 font-bold text-xs">
                             বাকি
                           </span>
                         )}
                       </td>
-                      <td className="py-3 px-4 text-right font-bold text-emerald-950">
+                      <td className="py-3 px-4 text-right font-bold text-emerald-950 font-mono">
                         {formatCurrency(totalDeposit)}
                       </td>
                     </tr>

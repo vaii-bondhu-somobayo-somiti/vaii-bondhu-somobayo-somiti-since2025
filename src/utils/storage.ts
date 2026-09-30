@@ -1,9 +1,46 @@
-import { SocietyData } from '../types';
+import { SocietyData, Member } from '../types';
 import { INITIAL_SOCIETY_DATA } from '../data/initialData';
 import { saveSocietyCloudData } from '../firebase';
 
-const STORAGE_KEY = 'bhai_bondhu_somobay_data_v1';
+const STORAGE_KEY = 'bhai_bondhu_somobay_data_v3';
 const LAST_SAVED_KEY = 'bhai_bondhu_last_saved_time';
+
+export function calculateMemberYearTotal(m: Member | any, targetYear: number): number {
+  if (targetYear === 2025) {
+    const dp1 = m.downPayment2025_1 !== undefined ? m.downPayment2025_1 : (m.downPayment || 0);
+    const dp2 = m.downPayment2025_2 || 0;
+    const fine = m.fine2025 !== undefined ? m.fine2025 : (m.fine || 0);
+    let months = 0;
+    const monthKeys = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
+    monthKeys.forEach((k) => {
+      let val = m.payments2025?.[k];
+      if (val === undefined || val === null) {
+        if (k === '08') val = m.august;
+        else if (k === '09') val = m.september;
+        else if (k === '10') val = m.october;
+      }
+      if (val && Number(val) > 0) {
+        months += Number(val);
+      }
+    });
+    return Number(dp1) + Number(dp2) + Number(fine) + months;
+  } else {
+    const dp1 = m.downPayment2026_1 || 0;
+    const dp2 = m.downPayment2026_2 || 0;
+    const fine = m.fine2026 || 0;
+    let months = 0;
+    if (m.payments2026) {
+      Object.values(m.payments2026).forEach((val: any) => {
+        if (val && Number(val) > 0) months += Number(val);
+      });
+    }
+    return Number(dp1) + Number(dp2) + Number(fine) + months;
+  }
+}
+
+export function calculateMemberAllTotal(m: Member | any): number {
+  return calculateMemberYearTotal(m, 2025) + calculateMemberYearTotal(m, 2026);
+}
 
 export function getStoredData(): SocietyData {
   try {

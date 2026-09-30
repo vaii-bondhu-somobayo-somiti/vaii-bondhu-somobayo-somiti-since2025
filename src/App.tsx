@@ -3,13 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { SocietyData, CurrentUser, Member } from './types';
 import { getStoredData, saveStoredData } from './utils/storage';
 import { subscribeToSocietyCloudData, saveSocietyCloudData } from './firebase';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { OriginalDocsModal } from './components/OriginalDocsModal';
+import { MobileBottomNav } from './components/MobileBottomNav';
 
 import { HomePage } from './pages/HomePage';
 import { CommitteePage } from './pages/CommitteePage';
@@ -25,7 +26,19 @@ import { YearChartPage } from './pages/YearChartPage';
 
 export default function App() {
   const [data, setData] = useState<SocietyData>(getStoredData);
-  const [activeTab, setActiveTab] = useState<string>('home');
+
+  // Read initial tab from URL hash
+  const getInitialTab = (): string => {
+    if (typeof window === 'undefined') return 'home';
+    const hash = window.location.hash.replace('#', '');
+    const validTabs = ['home', 'members', 'year2025', 'year2026', 'committee', 'payment', 'rules', 'report', 'contact', 'login', 'profile', 'admin'];
+    return validTabs.includes(hash) ? hash : 'home';
+  };
+
+  const [activeTab, setActiveTab] = useState<string>(getInitialTab);
+  const activeTabRef = useRef(activeTab);
+  activeTabRef.current = activeTab;
+
   const [currentUser, setCurrentUser] = useState<CurrentUser>(() => {
     const saved = localStorage.getItem('bhai_bondhu_current_user');
     if (saved) {
@@ -39,7 +52,68 @@ export default function App() {
   });
 
   const [docsModalOpen, setDocsModalOpen] = useState(false);
+  const docsModalOpenRef = useRef(docsModalOpen);
+  docsModalOpenRef.current = docsModalOpen;
+
   const [docsModalTab, setDocsModalTab] = useState<'rules' | 'ledger' | 'committee' | 'logo'>('rules');
+
+  // Navigate function with HTML5 History API integration (prevents website exit on phone back button)
+  const navigateTo = (tab: string, replace = false) => {
+    const validTabs = ['home', 'members', 'year2025', 'year2026', 'committee', 'payment', 'rules', 'report', 'contact', 'login', 'profile', 'admin'];
+    const targetTab = validTabs.includes(tab) ? tab : 'home';
+
+    const targetHash = targetTab === 'home' ? '' : `#${targetTab}`;
+    const currentHash = window.location.hash;
+
+    if (targetTab !== activeTabRef.current || currentHash !== targetHash) {
+      if (replace) {
+        window.history.replaceState({ tab: targetTab }, '', targetHash || window.location.pathname);
+      } else {
+        window.history.pushState({ tab: targetTab }, '', targetHash || window.location.pathname);
+      }
+      setActiveTab(targetTab);
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Physical/system back button handling on mobile phones and browser navigation
+  useEffect(() => {
+    // Ensure initial entry in history has state
+    const currentTab = getInitialTab();
+    if (!window.history.state) {
+      window.history.replaceState(
+        { tab: currentTab }, 
+        '', 
+        currentTab === 'home' ? window.location.pathname : `#${currentTab}`
+      );
+    }
+
+    const handlePopState = (e: PopStateEvent) => {
+      // 1. If original docs modal is open, close it instead of leaving page
+      if (docsModalOpenRef.current) {
+        setDocsModalOpen(false);
+        return;
+      }
+
+      // 2. Dispatch custom event for any sub-components with active modals (e.g. Member details modal)
+      const modalEvent = new CustomEvent('app_back_pressed', { cancelable: true });
+      window.dispatchEvent(modalEvent);
+      if (modalEvent.defaultPrevented) {
+        // Child modal was closed, stop here
+        return;
+      }
+
+      // 3. Navigate back to previous tab
+      const hash = window.location.hash.replace('#', '');
+      const validTabs = ['home', 'members', 'year2025', 'year2026', 'committee', 'payment', 'rules', 'report', 'contact', 'login', 'profile', 'admin'];
+      const targetTab = validTabs.includes(hash) ? hash : 'home';
+      setActiveTab(targetTab);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // Sync state with local updates and real-time Firebase Cloud Firestore
   useEffect(() => {
@@ -58,7 +132,7 @@ export default function App() {
       (cloudData) => {
         setData(cloudData);
         try {
-          localStorage.setItem('bhai_bondhu_somobay_data_v1', JSON.stringify(cloudData));
+          localStorage.setItem('bhai_bondhu_somobay_data_v3', JSON.stringify(cloudData));
         } catch {
           // ignore cache errors
         }
@@ -84,12 +158,21 @@ export default function App() {
     const guestUser: CurrentUser = { role: 'guest', name: '' };
     setCurrentUser(guestUser);
     localStorage.removeItem('bhai_bondhu_current_user');
-    setActiveTab('home');
+    navigateTo('home');
   };
 
   const handleOpenDocsModal = (tab: 'rules' | 'ledger' | 'committee' | 'logo' = 'rules') => {
     setDocsModalTab(tab);
     setDocsModalOpen(true);
+    // Push modal state to history so mobile back button closes the modal
+    window.history.pushState({ modal: 'docs' }, '', window.location.href);
+  };
+
+  const handleCloseDocsModal = () => {
+    setDocsModalOpen(false);
+    if (window.history.state && window.history.state.modal === 'docs') {
+      window.history.back();
+    }
   };
 
   const handleDataUpdated = (newData: SocietyData) => {
@@ -103,18 +186,18 @@ export default function App() {
       {/* Top Navigation */}
       <Navbar
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={navigateTo}
         currentUser={currentUser}
         onLogout={handleLogout}
         onOpenDocsModal={handleOpenDocsModal}
       />
 
-      {/* Main Dynamic View */}
-      <main className="flex-1">
+      {/* Main Dynamic View with bottom padding for mobile navigation */}
+      <main className="flex-1 pb-20 lg:pb-0">
         {activeTab === 'home' && (
           <HomePage
             data={data}
-            onNavigate={setActiveTab}
+            onNavigate={navigateTo}
             onOpenDocsModal={handleOpenDocsModal}
           />
         )}
@@ -123,6 +206,7 @@ export default function App() {
           <CommitteePage
             committee={data.committee}
             data={data}
+            onNavigate={navigateTo}
             onOpenDocsModal={handleOpenDocsModal}
           />
         )}
@@ -130,13 +214,14 @@ export default function App() {
         {activeTab === 'members' && (
           <MemberList
             members={data.members}
+            data={data}
             currentUser={currentUser}
             onOpenDocsModal={handleOpenDocsModal}
-            onNavigate={setActiveTab}
+            onNavigate={navigateTo}
             onDataUpdated={handleDataUpdated}
             onEditMember={(member: Member) => {
               if (currentUser.role === 'admin') {
-                setActiveTab('admin');
+                navigateTo('admin');
               }
             }}
           />
@@ -148,7 +233,7 @@ export default function App() {
             data={data}
             currentUser={currentUser}
             onDataUpdated={handleDataUpdated}
-            onNavigate={setActiveTab}
+            onNavigate={navigateTo}
           />
         )}
 
@@ -158,7 +243,7 @@ export default function App() {
             data={data}
             currentUser={currentUser}
             onDataUpdated={handleDataUpdated}
-            onNavigate={setActiveTab}
+            onNavigate={navigateTo}
           />
         )}
 
@@ -166,6 +251,7 @@ export default function App() {
           <PaymentPage
             data={data}
             onPaymentSubmitted={handleDataUpdated}
+            onNavigate={navigateTo}
           />
         )}
 
@@ -173,6 +259,7 @@ export default function App() {
           <RulesPage
             rules={data.rules}
             data={data}
+            onNavigate={navigateTo}
             onOpenDocsModal={handleOpenDocsModal}
           />
         )}
@@ -181,13 +268,14 @@ export default function App() {
           <ReportPage
             data={data}
             currentUser={currentUser}
-            onNavigate={setActiveTab}
+            onNavigate={navigateTo}
           />
         )}
 
         {activeTab === 'contact' && (
           <ContactPage
             data={data}
+            onNavigate={navigateTo}
           />
         )}
 
@@ -195,7 +283,7 @@ export default function App() {
           <LoginPage
             data={data}
             onLoginSuccess={handleLoginSuccess}
-            onNavigate={setActiveTab}
+            onNavigate={navigateTo}
           />
         )}
 
@@ -204,7 +292,7 @@ export default function App() {
             data={data}
             memberId={currentUser.memberId}
             onLogout={handleLogout}
-            onNavigate={setActiveTab}
+            onNavigate={navigateTo}
             onDataUpdated={handleDataUpdated}
           />
         )}
@@ -214,21 +302,27 @@ export default function App() {
             data={data}
             onDataUpdated={handleDataUpdated}
             onLogout={handleLogout}
-            onNavigate={setActiveTab}
+            onNavigate={navigateTo}
           />
         )}
       </main>
 
+      {/* Mobile Floating/Sticky Bottom Navigation */}
+      <MobileBottomNav
+        activeTab={activeTab}
+        onNavigate={navigateTo}
+      />
+
       {/* Footer with Circular Logo & Required Address */}
       <Footer
-        onNavClick={setActiveTab}
+        onNavClick={navigateTo}
         onOpenDocsModal={handleOpenDocsModal}
       />
 
       {/* Modal for viewing original documents & ledger */}
       <OriginalDocsModal
         isOpen={docsModalOpen}
-        onClose={() => setDocsModalOpen(false)}
+        onClose={handleCloseDocsModal}
         initialTab={docsModalTab}
       />
 

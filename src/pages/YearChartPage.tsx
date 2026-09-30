@@ -21,7 +21,8 @@ import {
   Layers,
   Save,
   Trash2,
-  User
+  User,
+  ArrowLeft
 } from 'lucide-react';
 
 interface YearChartPageProps {
@@ -581,6 +582,24 @@ export const YearChartPage: React.FC<YearChartPageProps> = ({
           </div>
         </div>
       )}
+
+      {/* Mobile Back / Quick Breadcrumb Button */}
+      <div className="flex items-center justify-between lg:hidden pb-1 -mt-2">
+        <button
+          onClick={() => {
+            if (window.history.length > 1) {
+              window.history.back();
+            } else {
+              onNavigate('home');
+            }
+          }}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-stone-200 text-stone-700 hover:text-emerald-800 text-xs font-bold shadow-2xs active:scale-95 transition-all cursor-pointer"
+        >
+          <ArrowLeft className="w-4 h-4 text-emerald-700" />
+          <span>হোমে ফিরে যান</span>
+        </button>
+        <span className="text-[11px] font-bold text-stone-500">হোম / {year} হিসাব</span>
+      </div>
 
       {/* Top Breadcrumb & Year Switcher */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-stone-200">

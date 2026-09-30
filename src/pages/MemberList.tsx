@@ -35,12 +35,45 @@ import {
 interface MemberListProps {
   members: Member[];
   currentUser: CurrentUser;
+  data?: SocietyData;
   onSelectMemberForProfile?: (memberId: string) => void;
   onEditMember?: (member: Member) => void;
   onOpenDocsModal: (tab?: 'rules' | 'ledger' | 'committee' | 'logo') => void;
   onNavigate: (tab: string) => void;
   onDataUpdated?: (newData: SocietyData) => void;
 }
+
+export const MONTHS_NAME_MAP: Record<string, string> = {
+  '01': 'জানুয়ারি',
+  '02': 'ফেব্রুয়ারি',
+  '03': 'মার্চ',
+  '04': 'এপ্রিল',
+  '05': 'মে',
+  '06': 'জুন',
+  '07': 'জুলাই',
+  '08': 'আগস্ট',
+  '09': 'সেপ্টেম্বর',
+  '10': 'অক্টোবর',
+  '11': 'নভেম্বর',
+  '12': 'ডিসেম্বর'
+};
+
+export const getMemberMonthPayment = (m: Member, yr: number, moKey: string): number | null => {
+  if (yr === 2025) {
+    if (m.payments2025 && m.payments2025[moKey] !== undefined) {
+      return m.payments2025[moKey];
+    }
+    if (moKey === '08') return m.august;
+    if (moKey === '09') return m.september;
+    if (moKey === '10') return m.october;
+    return null;
+  } else {
+    if (m.payments2026 && m.payments2026[moKey] !== undefined) {
+      return m.payments2026[moKey];
+    }
+    return null;
+  }
+};
 
 export const calculateMemberYearTotal = (m: Member, targetYear: number): number => {
   if (targetYear === 2025) {
@@ -82,27 +115,103 @@ export const calculateMemberAllTotal = (m: Member): number => {
 export const MemberList: React.FC<MemberListProps> = ({
   members,
   currentUser,
+  data,
   onSelectMemberForProfile,
   onEditMember,
   onOpenDocsModal,
   onNavigate,
   onDataUpdated
 }) => {
+  // Year & Month Switcher state - DEFAULT TO 2026 (Running Year)
+  const [selectedYear, setSelectedYear] = useState<2025 | 2026>(2026);
+
+  // Auto-detect real calendar running month (e.g. September = '09', October = '10', etc.)
+  const now = new Date();
+  const currentCalendarMonthKey = String(now.getMonth() + 1).padStart(2, '0');
+
+  const configuredMonths2026 = (data?.months2026 && data.months2026.length > 0)
+    ? data.months2026
+    : ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
+
+  const months2025List = [
+    { key: '08', name: 'আগস্ট ২০২৫' },
+    { key: '09', name: 'সেপ্টেম্বর ২০২৫' },
+    { key: '10', name: 'অক্টোবর ২০২৫' },
+    { key: '11', name: 'নভেম্বর ২০২৫' },
+    { key: '12', name: 'ডিসেম্বর ২০২৫' }
+  ];
+
+  const months2026List = configuredMonths2026.map(k => ({
+    key: k,
+    name: `${MONTHS_NAME_MAP[k] || k} ২০২৬`
+  }));
+
+  const availableMonths = selectedYear === 2026 ? months2026List : months2025List;
+
+  // IMPORTANT: ALWAYS default to the ACTUAL current running month (e.g. '09' for September, NEVER December!)
+  const getInitialRunningMonth = (yr: number): string => {
+    if (yr === 2026) {
+      if (configuredMonths2026.includes(currentCalendarMonthKey)) {
+        return currentCalendarMonthKey;
+      }
+      return '09';
+    }
+    return '09';
+  };
+
+  const [selectedMonth, setSelectedMonth] = useState<string>(getInitialRunningMonth(2026));
+
+  const handleYearChange = (year: 2025 | 2026) => {
+    setSelectedYear(year);
+    setSelectedMonth(getInitialRunningMonth(year));
+    setStatusFilter('all');
+  };
+
+  const currentMonthName = MONTHS_NAME_MAP[selectedMonth] || selectedMonth;
+  const isActualRunningMonth = selectedMonth === currentCalendarMonthKey && selectedYear === 2026;
+
   const [searchTerm, setSearchTerm] = useState('');
   const [searchMode, setSearchMode] = useState<'all' | 'id' | 'name' | 'phone'>('all');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'paid_sep' | 'baki_sep' | 'baki_aug' | 'any_baki'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'paid' | 'baki' | 'any_baki'>('all');
   const [roleFilter, setRoleFilter] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<'roll_asc' | 'id_asc' | 'name_asc' | 'deposit_desc' | 'deposit_asc'>('roll_asc');
+  const [sortBy, setSortBy] = useState<'roll_asc' | 'id_asc' | 'name_asc' | 'deposit_desc' | 'deposit_asc' | 'year_deposit_desc'>('roll_asc');
   const [selectedQuickId, setSelectedQuickId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
 
+  const handleOpenMemberDetails = (m: Member) => {
+    setSelectedMember(m);
+    // Push modal state to browser history so phone back button closes modal
+    window.history.pushState({ modal: 'member_details', memberId: m.id }, '', window.location.href);
+  };
+
+  const handleCloseMemberDetails = () => {
+    if (selectedMember) {
+      setSelectedMember(null);
+      if (window.history.state && window.history.state.modal === 'member_details') {
+        window.history.back();
+      }
+    }
+  };
+
+  // Close modal on hardware/phone back button press
+  React.useEffect(() => {
+    const handleBackPressed = (e: Event) => {
+      if (selectedMember) {
+        e.preventDefault(); // Stop outer page navigation, close modal
+        setSelectedMember(null);
+      }
+    };
+    window.addEventListener('app_back_pressed', handleBackPressed);
+    return () => window.removeEventListener('app_back_pressed', handleBackPressed);
+  }, [selectedMember]);
+
   // Close modal on ESC key
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && selectedMember) {
-        setSelectedMember(null);
+        handleCloseMemberDetails();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -188,15 +297,20 @@ export const MemberList: React.FC<MemberListProps> = ({
       if (mRole !== roleFilter) return false;
     }
 
-    // Status filter
-    if (statusFilter === 'paid_sep') {
-      if (!m.september || m.september <= 0) return false;
-    } else if (statusFilter === 'baki_sep') {
-      if (m.september !== null && m.september > 0) return false;
-    } else if (statusFilter === 'baki_aug') {
-      if (m.august !== null && m.august > 0) return false;
+    // Status filter based on selected year & month
+    const monthPayment = getMemberMonthPayment(m, selectedYear, selectedMonth);
+    const isPaid = monthPayment !== null && Number(monthPayment) > 0;
+
+    if (statusFilter === 'paid') {
+      if (!isPaid) return false;
+    } else if (statusFilter === 'baki') {
+      if (isPaid) return false;
     } else if (statusFilter === 'any_baki') {
-      const hasDue = (!m.august || m.august <= 0) || (!m.september || m.september <= 0);
+      const monthsToCheck = selectedYear === 2026 ? configuredMonths2026 : ['08', '09', '10', '11', '12'];
+      const hasDue = monthsToCheck.some(mo => {
+        const val = getMemberMonthPayment(m, selectedYear, mo);
+        return val === null || Number(val) <= 0;
+      });
       if (!hasDue) return false;
     }
 
@@ -236,21 +350,33 @@ export const MemberList: React.FC<MemberListProps> = ({
   }).sort((a, b) => {
     const totalA = calculateMemberAllTotal(a);
     const totalB = calculateMemberAllTotal(b);
+    const yearA = calculateMemberYearTotal(a, selectedYear);
+    const yearB = calculateMemberYearTotal(b, selectedYear);
 
     if (sortBy === 'roll_asc') return a.rollNo - b.rollNo;
     if (sortBy === 'id_asc') return a.id.localeCompare(b.id);
     if (sortBy === 'name_asc') return a.name.localeCompare(b.name, 'bn');
     if (sortBy === 'deposit_desc') return totalB - totalA;
     if (sortBy === 'deposit_asc') return totalA - totalB;
+    if (sortBy === 'year_deposit_desc') return yearB - yearA;
     return a.rollNo - b.rollNo;
   });
 
-  // Calculate summary counts
+  // Calculate dynamic summary counts for the selected year & month
   const totalCount = members.length;
-  const septPaidCount = members.filter(m => m.september && m.september > 0).length;
-  const septBakiCount = totalCount - septPaidCount;
-  const augBakiCount = members.filter(m => !m.august || m.august === 0).length;
-  const anyBakiCount = members.filter(m => (!m.august || m.august <= 0) || (!m.september || m.september <= 0)).length;
+  const currentMonthPaidCount = members.filter(m => {
+    const val = getMemberMonthPayment(m, selectedYear, selectedMonth);
+    return val !== null && Number(val) > 0;
+  }).length;
+  const currentMonthBakiCount = totalCount - currentMonthPaidCount;
+
+  const anyBakiInYearCount = members.filter(m => {
+    const monthsToCheck = selectedYear === 2026 ? configuredMonths2026 : ['08', '09', '10', '11', '12'];
+    return monthsToCheck.some(mo => {
+      const val = getMemberMonthPayment(m, selectedYear, mo);
+      return val === null || Number(val) <= 0;
+    });
+  }).length;
 
   const hasActiveFilters = Boolean(
     searchTerm || 
@@ -261,8 +387,26 @@ export const MemberList: React.FC<MemberListProps> = ({
   );
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-6 sm:space-y-8">
       
+      {/* Mobile Back / Quick Breadcrumb Button */}
+      <div className="flex items-center justify-between lg:hidden pb-1 -mt-2">
+        <button
+          onClick={() => {
+            if (window.history.length > 1) {
+              window.history.back();
+            } else {
+              onNavigate('home');
+            }
+          }}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-stone-200 text-stone-700 hover:text-emerald-800 text-xs font-bold shadow-2xs active:scale-95 transition-all cursor-pointer"
+        >
+          <ArrowLeft className="w-4 h-4 text-emerald-700" />
+          <span>হোমে ফিরে যান</span>
+        </button>
+        <span className="text-[11px] font-bold text-stone-500">হোম / সদস্য তালিকা</span>
+      </div>
+
       {/* Header Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-stone-200">
         <div>
@@ -273,17 +417,17 @@ export const MemberList: React.FC<MemberListProps> = ({
             <span className="text-xs text-stone-500 font-medium">সদস্য আইডি (যেমন: VB20250001)</span>
           </div>
           <h1 className="text-2xl sm:text-4xl font-extrabold text-emerald-950 mt-1">
-            সমিতির ২৪ জন সদস্য তালিকা
+            সমিতির ২৪ জন সদস্যের লাইভ হিসাব
           </h1>
           <p className="text-xs sm:text-sm text-stone-600 mt-1">
-            প্রত্যেক সদস্যের নাম, ফোন নম্বর, আগস্ট ও সেপ্টেম্বর মাসের জমার লাইভ স্ট্যাটাস
+            রানিং বছর {toBengaliNumber(selectedYear)} • {currentMonthName} মাসের জমার লাইভ স্ট্যাটাস ও সর্বমোট আমানত
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => onNavigate('year2025')}
-            className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-900 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-2xs"
+            className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-900 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer"
           >
             <Calendar className="w-3.5 h-3.5 text-emerald-700" />
             ২০২৫ চার্ট
@@ -291,7 +435,7 @@ export const MemberList: React.FC<MemberListProps> = ({
 
           <button
             onClick={() => onNavigate('year2026')}
-            className="px-3 py-2 bg-sky-50 hover:bg-sky-100 border border-sky-300 text-sky-900 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-2xs"
+            className="px-3 py-2 bg-sky-50 hover:bg-sky-100 border border-sky-300 text-sky-900 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer"
           >
             <TrendingUp className="w-3.5 h-3.5 text-sky-700" />
             ২০২৬ চার্ট
@@ -299,7 +443,7 @@ export const MemberList: React.FC<MemberListProps> = ({
 
           <button
             onClick={() => onOpenDocsModal('ledger')}
-            className="px-3.5 py-2 bg-red-50 hover:bg-red-100 border border-red-300 text-red-900 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs"
+            className="px-3.5 py-2 bg-red-50 hover:bg-red-100 border border-red-300 text-red-900 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
           >
             <FileCheck2 className="w-4 h-4 text-red-600" />
             আসল লাল খাতা দেখুন
@@ -308,7 +452,7 @@ export const MemberList: React.FC<MemberListProps> = ({
           <div className="bg-stone-100 p-1 rounded-xl flex items-center border border-stone-200">
             <button
               onClick={() => setViewMode('cards')}
-              className={`p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all ${
+              className={`p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
                 viewMode === 'cards' ? 'bg-white text-emerald-900 shadow-xs' : 'text-stone-600'
               }`}
               title="কার্ড ভিউ"
@@ -317,13 +461,98 @@ export const MemberList: React.FC<MemberListProps> = ({
             </button>
             <button
               onClick={() => setViewMode('table')}
-              className={`p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all ${
+              className={`p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
                 viewMode === 'table' ? 'bg-white text-emerald-900 shadow-xs' : 'text-stone-600'
               }`}
               title="টেবিল ভিউ"
             >
               <List className="w-4 h-4" /> টেবিল
             </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Running Year & Month Live Control Banner */}
+      <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-emerald-950 rounded-3xl p-5 sm:p-6 text-white shadow-xl border-2 border-amber-400 flex flex-col md:flex-row md:items-center justify-between gap-5 relative overflow-hidden">
+        <div className="space-y-1.5 z-10">
+          <div className="inline-flex items-center gap-1.5 bg-amber-400 text-emerald-950 text-[11px] font-black px-3 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
+            <Sparkles className="w-3.5 h-3.5 fill-emerald-950" />
+            চলতি বছরের রানিং হিসাব
+          </div>
+          <h2 className="text-xl sm:text-3xl font-black text-white tracking-tight">
+            {selectedYear === 2026 ? '২০২৬ সালের লাইভ হিসাব' : '২০২৫ সালের বিগত রেকর্ড'}
+          </h2>
+          <p className="text-xs sm:text-sm text-emerald-200">
+            বর্তমানে প্রদর্শিত হচ্ছে: <strong className="text-amber-300 font-bold">{currentMonthName} {toBengaliNumber(selectedYear)}</strong> এর মাসিক চাঁদার স্ট্যাটাস
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 z-10">
+          {/* Year Switcher (2026 default vs 2025) */}
+          <div className="bg-emerald-900/90 p-1 rounded-2xl border border-emerald-700/80 flex items-center shadow-inner">
+            <button
+              type="button"
+              onClick={() => handleYearChange(2026)}
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                selectedYear === 2026
+                  ? 'bg-amber-400 text-emerald-950 shadow-md scale-102 ring-2 ring-amber-300/50'
+                  : 'text-emerald-200 hover:text-white hover:bg-emerald-800/50'
+              }`}
+            >
+              <TrendingUp className="w-4 h-4" />
+              <span>২০২৬ (চলতি বছর)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleYearChange(2025)}
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                selectedYear === 2025
+                  ? 'bg-white text-emerald-950 shadow-md scale-102 ring-2 ring-white/50'
+                  : 'text-emerald-200 hover:text-white hover:bg-emerald-800/50'
+              }`}
+            >
+              <Calendar className="w-4 h-4" />
+              <span>২০২৫ (বিগত)</span>
+            </button>
+          </div>
+
+          {/* Month Selector for the Active Year */}
+          <div className="flex items-center gap-2 bg-emerald-900/90 px-3.5 py-2 rounded-2xl border border-emerald-700/80">
+            <Calendar className="w-4 h-4 text-amber-300 shrink-0" />
+            <span className="text-xs text-emerald-200 font-bold whitespace-nowrap">মাস নির্বাচন:</span>
+            <select
+              value={selectedMonth}
+              onChange={(e) => {
+                setSelectedMonth(e.target.value);
+                setStatusFilter('all');
+              }}
+              className="bg-emerald-950 text-white font-bold text-xs sm:text-sm py-1 px-3 rounded-xl border border-emerald-600 focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
+            >
+              {availableMonths.map((m) => {
+                const isRunning = m.key === currentCalendarMonthKey && selectedYear === 2026;
+                return (
+                  <option key={m.key} value={m.key} className="bg-stone-900 text-white font-bold">
+                    {m.name} {isRunning ? ' ★ (চলতি রানিং মাস)' : ''}
+                  </option>
+                );
+              })}
+            </select>
+
+            {/* Quick button to return to running month if viewing another month */}
+            {!isActualRunningMonth && selectedYear === 2026 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedMonth(getInitialRunningMonth(2026));
+                  setStatusFilter('all');
+                }}
+                className="px-2.5 py-1 bg-amber-400 hover:bg-amber-300 text-emerald-950 rounded-lg text-[11px] font-black transition-all cursor-pointer whitespace-nowrap shadow-xs ml-1"
+                title="সরাসরি চলতি রানিং মাসে ফিরে যান"
+              >
+                চলতি মাসে যান
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -488,40 +717,29 @@ export const MemberList: React.FC<MemberListProps> = ({
                   : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
               }`}
             >
-              সকল ({toBengaliNumber(totalCount)})
+              সকল সদস্য ({toBengaliNumber(totalCount)})
             </button>
 
             <button
-              onClick={() => setStatusFilter('paid_sep')}
+              onClick={() => setStatusFilter('paid')}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 border ${
-                statusFilter === 'paid_sep'
+                statusFilter === 'paid'
                   ? 'bg-emerald-700 text-white border-emerald-800 shadow-xs'
                   : 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
               }`}
             >
-              <CheckCircle2 className="w-3 h-3" /> সেপ্টেম্বর পরিশোধিত ({toBengaliNumber(septPaidCount)})
+              <CheckCircle2 className="w-3 h-3" /> {currentMonthName} পরিশোধিত ({toBengaliNumber(currentMonthPaidCount)})
             </button>
 
             <button
-              onClick={() => setStatusFilter('baki_sep')}
+              onClick={() => setStatusFilter('baki')}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 border ${
-                statusFilter === 'baki_sep'
+                statusFilter === 'baki'
                   ? 'bg-red-700 text-white border-red-800 shadow-xs'
                   : 'bg-red-50 text-red-800 border-red-200 hover:bg-red-100'
               }`}
             >
-              <XCircle className="w-3 h-3" /> সেপ্টেম্বর বাকি ({toBengaliNumber(septBakiCount)})
-            </button>
-
-            <button
-              onClick={() => setStatusFilter('baki_aug')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 border ${
-                statusFilter === 'baki_aug'
-                  ? 'bg-amber-700 text-white border-amber-800 shadow-xs'
-                  : 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'
-              }`}
-            >
-              আগস্ট বাকি ({toBengaliNumber(augBakiCount)})
+              <XCircle className="w-3 h-3" /> {currentMonthName} বাকি ({toBengaliNumber(currentMonthBakiCount)})
             </button>
 
             <button
@@ -532,7 +750,7 @@ export const MemberList: React.FC<MemberListProps> = ({
                   : 'bg-stone-50 text-stone-700 border-stone-300 hover:bg-stone-100'
               }`}
             >
-              যেকোনো বকেয়া ({toBengaliNumber(anyBakiCount)})
+              {toBengaliNumber(selectedYear)} এ যেকোনো বকেয়া ({toBengaliNumber(anyBakiInYearCount)})
             </button>
           </div>
 
@@ -545,7 +763,7 @@ export const MemberList: React.FC<MemberListProps> = ({
               <select
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
-                className="text-xs font-semibold py-1.5 px-2.5 rounded-xl border border-stone-300 bg-white focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-hidden"
+                className="text-xs font-semibold py-1.5 px-2.5 rounded-xl border border-stone-300 bg-white focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-hidden cursor-pointer"
               >
                 <option value="all">সকল পদবী</option>
                 {uniqueRoles.map((role) => (
@@ -560,13 +778,14 @@ export const MemberList: React.FC<MemberListProps> = ({
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
-                className="text-xs font-semibold py-1.5 px-2.5 rounded-xl border border-stone-300 bg-white focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-hidden"
+                className="text-xs font-semibold py-1.5 px-2.5 rounded-xl border border-stone-300 bg-white focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-hidden cursor-pointer"
               >
                 <option value="roll_asc">ক্রমিক (১ - ২৪)</option>
                 <option value="id_asc">আইডি (VB...)</option>
                 <option value="name_asc">নাম (ক - য়)</option>
-                <option value="deposit_desc">মোট জমা (সর্বোচ্চ আগে)</option>
-                <option value="deposit_asc">মোট জমা (কম আগে)</option>
+                <option value="year_deposit_desc">{toBengaliNumber(selectedYear)} সালের জমা (বেশি আগে)</option>
+                <option value="deposit_desc">সর্বমোট জমা (সর্বোচ্চ আগে)</option>
+                <option value="deposit_asc">সর্বমোট জমা (কম আগে)</option>
               </select>
             </div>
 
@@ -600,7 +819,7 @@ export const MemberList: React.FC<MemberListProps> = ({
 
               {statusFilter !== 'all' && (
                 <span className="bg-stone-200 text-stone-800 font-bold px-2 py-0.5 rounded-lg flex items-center gap-1">
-                  স্ট্যাটাস: {statusFilter === 'paid_sep' ? 'সেপ্টেম্বর পরিশোধিত' : statusFilter === 'baki_sep' ? 'সেপ্টেম্বর বাকি' : statusFilter === 'baki_aug' ? 'আগস্ট বাকি' : 'যেকোনো বকেয়া'}
+                  স্ট্যাটাস: {statusFilter === 'paid' ? `${currentMonthName} পরিশোধিত` : statusFilter === 'baki' ? `${currentMonthName} বাকি` : `${toBengaliNumber(selectedYear)} সালে বকেয়া`}
                   <button onClick={() => setStatusFilter('all')} className="hover:text-red-700 cursor-pointer">
                     <X className="w-3 h-3" />
                   </button>
@@ -661,15 +880,13 @@ export const MemberList: React.FC<MemberListProps> = ({
         </div>
       )}
 
-      {/* VIEW MODE: CARDS (Requested explicitly by user: "প্রত্যেকের Card: Member ID, নাম, মোবাইল, মোট জমা, আগস্ট, সেপ্টেম্বর Status: Paid/Baki") */}
+      {/* VIEW MODE: CARDS */}
       {filteredMembers.length > 0 && (viewMode === 'cards' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
           {filteredMembers.map((member) => {
-            const runningSep = member.payments2025?.['09'] !== undefined && member.payments2025?.['09'] !== null 
-              ? member.payments2025['09'] 
-              : member.september;
-            const isAugPaid = member.august !== null && member.august > 0;
-            const isSepPaid = runningSep !== null && Number(runningSep) > 0;
+            const currentMonthPayment = getMemberMonthPayment(member, selectedYear, selectedMonth);
+            const isCurrentMonthPaid = currentMonthPayment !== null && Number(currentMonthPayment) > 0;
+            const yearDeposit = calculateMemberYearTotal(member, selectedYear);
             const totalDeposit = calculateMemberAllTotal(member);
 
             return (
@@ -679,7 +896,7 @@ export const MemberList: React.FC<MemberListProps> = ({
               >
                 {/* Top decorative stripe */}
                 <div className={`absolute top-0 left-0 right-0 h-1.5 ${
-                  isSepPaid ? 'bg-emerald-600' : 'bg-red-500'
+                  isCurrentMonthPaid ? 'bg-emerald-600' : 'bg-red-500'
                 }`} />
 
                 {/* Card Header: Member ID & Roll */}
@@ -772,7 +989,7 @@ export const MemberList: React.FC<MemberListProps> = ({
                       </a>
                       <button
                         onClick={() => handleCopyPhone(member.phone, member.id)}
-                        className="p-1 text-stone-500 hover:text-emerald-700"
+                        className="p-1 text-stone-500 hover:text-emerald-700 cursor-pointer"
                         title="নম্বর কপি করুন"
                       >
                         {copiedId === member.id ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
@@ -780,27 +997,27 @@ export const MemberList: React.FC<MemberListProps> = ({
                     </div>
                   </div>
 
-                  {/* Single Running Month Status: চলতি মাস (সেপ্টেম্বর ২০২৫) */}
+                  {/* Selected Year Running Month Status */}
                   <div className="pt-2">
                     <div className={`p-2.5 rounded-2xl border text-center transition-all ${
-                      isSepPaid 
+                      isCurrentMonthPaid 
                         ? 'bg-emerald-50/90 border-emerald-300 text-emerald-950 shadow-2xs' 
                         : 'bg-red-50/90 border-red-300 text-red-950 shadow-2xs'
                     }`}>
                       <div className="flex items-center justify-between">
                         <span className="text-[11px] font-bold text-stone-600 flex items-center gap-1">
                           <Calendar className="w-3.5 h-3.5 text-emerald-700" />
-                          চলতি মাস (সেপ্টেম্বর):
+                          {isActualRunningMonth ? `চলতি মাস (${currentMonthName}):` : `${currentMonthName} ${toBengaliNumber(selectedYear)}:`}
                         </span>
-                        {isSepPaid ? (
+                        {isCurrentMonthPaid ? (
                           <span className="inline-flex items-center gap-1 text-xs font-black text-emerald-800 bg-emerald-100 border border-emerald-300 px-2.5 py-0.5 rounded-full">
                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                            Paid ({toBengaliNumber(runningSep)} ৳)
+                            Paid ({toBengaliNumber(currentMonthPayment)} ৳)
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 text-xs font-black text-red-800 bg-red-100 border border-red-300 px-2.5 py-0.5 rounded-full">
                             <XCircle className="w-3.5 h-3.5 text-red-600 shrink-0" />
-                            Due (দেউ)
+                            Due (বাকি)
                           </span>
                         )}
                       </div>
@@ -808,20 +1025,27 @@ export const MemberList: React.FC<MemberListProps> = ({
                   </div>
                 </div>
 
-                {/* Card Footer: Total Deposit */}
+                {/* Card Footer: Year Deposit and All-time Deposit */}
                 <div className="mt-4 pt-3 border-t border-stone-100 flex items-center justify-between">
                   <div>
-                    <span className="text-[10px] text-stone-500 block font-semibold">মোট জমা</span>
-                    <span className="text-base font-black text-emerald-900">
-                      {formatCurrency(totalDeposit)}
+                    <span className="text-[10px] text-stone-500 block font-semibold">
+                      {toBengaliNumber(selectedYear)} জমা / সর্বমোট
                     </span>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-base font-black text-emerald-900">
+                        {formatCurrency(yearDeposit)}
+                      </span>
+                      <span className="text-[11px] text-stone-400 font-bold">
+                        / {formatCurrency(totalDeposit)}
+                      </span>
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-1">
                     {currentUser.role === 'admin' && onEditMember && (
                       <button
                         onClick={() => onEditMember(member)}
-                        className="p-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-xs"
+                        className="p-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-xs cursor-pointer"
                         title="হিসাব এডিট করুন"
                       >
                         <Edit3 className="w-3.5 h-3.5" />
@@ -829,8 +1053,8 @@ export const MemberList: React.FC<MemberListProps> = ({
                     )}
                     
                     <button
-                      onClick={() => setSelectedMember(member)}
-                      className="px-2.5 py-1.5 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-1"
+                      onClick={() => handleOpenMemberDetails(member)}
+                      className="px-2.5 py-1.5 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer"
                     >
                       <FileText className="w-3 h-3" /> বিবরণী
                     </button>
@@ -853,18 +1077,17 @@ export const MemberList: React.FC<MemberListProps> = ({
                   <th className="py-3 px-3">সদস্যের নাম</th>
                   <th className="py-3 px-3">পদবী</th>
                   <th className="py-3 px-3 font-mono">মোবাইল নম্বর</th>
-                  <th className="py-3 px-3 text-center">চলতি মাস (সেপ্টেম্বর)</th>
-                  <th className="py-3 px-3 text-right">মোট জমা</th>
+                  <th className="py-3 px-3 text-center">{currentMonthName} {toBengaliNumber(selectedYear)} স্ট্যাটাস</th>
+                  <th className="py-3 px-3 text-right">{toBengaliNumber(selectedYear)} জমা</th>
+                  <th className="py-3 px-3 text-right">সর্বমোট জমা</th>
                   <th className="py-3 px-3 text-center">অ্যাকশন</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100">
                 {filteredMembers.map((m) => {
-                  const runningSep = m.payments2025?.['09'] !== undefined && m.payments2025?.['09'] !== null 
-                    ? m.payments2025['09'] 
-                    : m.september;
-                  const isAugPaid = m.august !== null && m.august > 0;
-                  const isSepPaid = runningSep !== null && Number(runningSep) > 0;
+                  const currentMonthPayment = getMemberMonthPayment(m, selectedYear, selectedMonth);
+                  const isCurrentMonthPaid = currentMonthPayment !== null && Number(currentMonthPayment) > 0;
+                  const yearDeposit = calculateMemberYearTotal(m, selectedYear);
                   const totalDeposit = calculateMemberAllTotal(m);
 
                   return (
@@ -905,23 +1128,26 @@ export const MemberList: React.FC<MemberListProps> = ({
                         {m.phone}
                       </td>
                       <td className="py-3 px-3 text-center">
-                        {isSepPaid ? (
+                        {isCurrentMonthPaid ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-300">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Paid ({toBengaliNumber(runningSep)} ৳)
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Paid ({toBengaliNumber(currentMonthPayment)} ৳)
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-100 text-red-700 text-xs font-bold border border-red-300">
-                            <XCircle className="w-3.5 h-3.5 text-red-600" /> Due (দেউ)
+                            <XCircle className="w-3.5 h-3.5 text-red-600" /> Due (বাকি)
                           </span>
                         )}
                       </td>
-                      <td className="py-3 px-3 text-right font-black text-emerald-950">
+                      <td className="py-3 px-3 text-right font-black text-emerald-950 font-mono">
+                        {formatCurrency(yearDeposit)}
+                      </td>
+                      <td className="py-3 px-3 text-right font-black text-stone-800 font-mono">
                         {formatCurrency(totalDeposit)}
                       </td>
                       <td className="py-3 px-3 text-center">
                         <button
-                          onClick={() => setSelectedMember(m)}
-                          className="px-2.5 py-1.5 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1 shadow-2xs"
+                          onClick={() => handleOpenMemberDetails(m)}
+                          className="px-2.5 py-1.5 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1 shadow-2xs cursor-pointer"
                         >
                           <FileText className="w-3 h-3" /> বিবরণী
                         </button>
@@ -939,7 +1165,7 @@ export const MemberList: React.FC<MemberListProps> = ({
       {selectedMember && (
         <div 
           className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-xs overflow-y-auto"
-          onClick={() => setSelectedMember(null)}
+          onClick={handleCloseMemberDetails}
         >
           <div 
             className="bg-white rounded-3xl max-w-2xl w-full max-h-[92vh] flex flex-col shadow-2xl border-2 border-emerald-800/40 animate-in zoom-in-95 overflow-hidden my-auto"
@@ -950,7 +1176,7 @@ export const MemberList: React.FC<MemberListProps> = ({
             <div className="sticky top-0 z-20 bg-stone-900 text-white px-4 sm:px-6 py-3 flex items-center justify-between border-b border-stone-800 shadow-sm shrink-0">
               <button
                 type="button"
-                onClick={() => setSelectedMember(null)}
+                onClick={handleCloseMemberDetails}
                 className="inline-flex items-center gap-2 px-3.5 py-2 bg-emerald-800 hover:bg-emerald-700 active:bg-emerald-900 text-white rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-xs border border-emerald-600"
               >
                 <ArrowLeft className="w-4 h-4 text-amber-300" />
@@ -963,7 +1189,7 @@ export const MemberList: React.FC<MemberListProps> = ({
                 </span>
                 <button
                   type="button"
-                  onClick={() => setSelectedMember(null)}
+                  onClick={handleCloseMemberDetails}
                   className="px-3 py-1.5 bg-stone-800 hover:bg-red-700 hover:text-white text-stone-300 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold border border-stone-700"
                   title="বন্ধ করুন"
                 >
@@ -1328,7 +1554,7 @@ export const MemberList: React.FC<MemberListProps> = ({
             <div className="sticky bottom-0 z-20 bg-stone-100 px-4 sm:px-6 py-3 border-t border-stone-300 flex items-center justify-between gap-3 shrink-0 shadow-lg">
               <button
                 type="button"
-                onClick={() => setSelectedMember(null)}
+                onClick={handleCloseMemberDetails}
                 className="px-4 py-2 bg-stone-800 hover:bg-stone-900 active:bg-black text-white rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 shadow-xs cursor-pointer transition-all border border-stone-700"
               >
                 <ArrowLeft className="w-4 h-4 text-amber-300" />
@@ -1339,7 +1565,7 @@ export const MemberList: React.FC<MemberListProps> = ({
                 <button
                   type="button"
                   onClick={() => {
-                    setSelectedMember(null);
+                    handleCloseMemberDetails();
                     onNavigate('payment');
                   }}
                   className="px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
@@ -1350,7 +1576,7 @@ export const MemberList: React.FC<MemberListProps> = ({
 
                 <button
                   type="button"
-                  onClick={() => setSelectedMember(null)}
+                  onClick={handleCloseMemberDetails}
                   className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-900 rounded-xl text-xs sm:text-sm font-bold cursor-pointer transition-colors border border-red-300"
                 >
                   ✕ বন্ধ করুন

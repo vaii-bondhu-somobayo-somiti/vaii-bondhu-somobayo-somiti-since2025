@@ -38,6 +38,39 @@ export function calculateMemberYearTotal(m: Member | any, targetYear: number): n
   }
 }
 
+export const MONTHS_NAME_MAP: Record<string, string> = {
+  '01': 'জানুয়ারি',
+  '02': 'ফেব্রুয়ারি',
+  '03': 'মার্চ',
+  '04': 'এপ্রিল',
+  '05': 'মে',
+  '06': 'জুন',
+  '07': 'জুলাই',
+  '08': 'আগস্ট',
+  '09': 'সেপ্টেম্বর',
+  '10': 'অক্টোবর',
+  '11': 'নভেম্বর',
+  '12': 'ডিসেম্বর'
+};
+
+export function getMemberMonthPayment(m: Member | any, yr: number, moKey: string): number | null {
+  if (!m) return null;
+  if (yr === 2025) {
+    if (m.payments2025 && m.payments2025[moKey] !== undefined && m.payments2025[moKey] !== null) {
+      return Number(m.payments2025[moKey]);
+    }
+    if (moKey === '08') return m.august !== undefined && m.august !== null ? Number(m.august) : null;
+    if (moKey === '09') return m.september !== undefined && m.september !== null ? Number(m.september) : null;
+    if (moKey === '10') return m.october !== undefined && m.october !== null ? Number(m.october) : null;
+    return null;
+  } else {
+    if (m.payments2026 && m.payments2026[moKey] !== undefined && m.payments2026[moKey] !== null) {
+      return Number(m.payments2026[moKey]);
+    }
+    return null;
+  }
+}
+
 export function calculateMemberAllTotal(m: Member | any): number {
   return calculateMemberYearTotal(m, 2025) + calculateMemberYearTotal(m, 2026);
 }
@@ -112,9 +145,13 @@ export function getStoredData(): SocietyData {
       nagadNumbers: Array.isArray(parsed.nagadNumbers) && parsed.nagadNumbers.length > 0 
         ? parsed.nagadNumbers 
         : INITIAL_SOCIETY_DATA.nagadNumbers,
-      rules: Array.isArray(parsed.rules) && parsed.rules.length > 0 
+      rules: (Array.isArray(parsed.rules) && parsed.rules.length > 0 
         ? parsed.rules 
-        : INITIAL_SOCIETY_DATA.rules,
+        : INITIAL_SOCIETY_DATA.rules).map((r: any) => ({
+          ...r,
+          description: (r.description || '').replace(/১৫\s*তারিখ/g, '২০ তারিখ'),
+          highlight: (r.highlight || '').replace(/১৫\s*তারিখ/g, '২০ তারিখ')
+        })),
       committee: Array.isArray(parsed.committee) && parsed.committee.length > 0 
         ? parsed.committee 
         : INITIAL_SOCIETY_DATA.committee,
@@ -124,7 +161,13 @@ export function getStoredData(): SocietyData {
         : ['01', '02', '03'],
       expenses: Array.isArray(parsed.expenses) ? parsed.expenses : INITIAL_SOCIETY_DATA.expenses,
       paymentSubmissions: Array.isArray(parsed.paymentSubmissions) ? parsed.paymentSubmissions : [],
-      notices: Array.isArray(parsed.notices) ? parsed.notices : INITIAL_SOCIETY_DATA.notices,
+      notices: (Array.isArray(parsed.notices) && parsed.notices.length > 0 
+        ? parsed.notices 
+        : INITIAL_SOCIETY_DATA.notices).map((n: any) => ({
+          ...n,
+          title: (n.title || '').replace(/১৫\s*তারিখ/g, '২০ তারিখ'),
+          content: (n.content || '').replace(/১৫\s*তারিখ/g, '২০ তারিখ')
+        })),
       adminSecurity: parsed.adminSecurity || INITIAL_SOCIETY_DATA.adminSecurity
     };
     return merged;

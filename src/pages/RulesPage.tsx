@@ -129,7 +129,7 @@ export const RulesPage: React.FC<RulesPageProps> = ({ rules, data, onNavigate, o
         <div className="bg-amber-50 border border-amber-200 p-4 rounded-2xl text-center">
           <Calendar className="w-6 h-6 text-amber-700 mx-auto mb-1" />
           <span className="text-xs text-stone-500 font-semibold block">জমার তারিখ</span>
-          <p className="text-base sm:text-lg font-bold text-amber-950">১৫ তারিখ</p>
+          <p className="text-base sm:text-lg font-bold text-amber-950">২০ তারিখ</p>
           <span className="text-[10px] text-amber-700 font-medium">প্রতি মাসের মধ্যে</span>
         </div>
 
@@ -241,10 +241,10 @@ export const RulesPage: React.FC<RulesPageProps> = ({ rules, data, onNavigate, o
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs sm:text-sm">
           <div className="p-3.5 bg-stone-50 rounded-xl border border-stone-200 space-y-1">
             <strong className="text-stone-900 block font-bold">
-              ১. ১৫ তারিখের পর চাঁদা দিলে কী ব্যবস্থা নেওয়া হবে?
+              ১. ২০ তারিখের পর চাঁদা দিলে কী ব্যবস্থা নেওয়া হবে?
             </strong>
             <p className="text-stone-600 leading-relaxed">
-              ধারা ৩ অনুযায়ী, ১৫ তারিখের মধ্যে চাঁদা জমা দিতে ব্যর্থ হলে কমিটি সার্বিক পরিস্থিতি বিবেচনা করে যে কোনো সিদ্ধান্ত (জরিমানা বা পরবর্তী তারিখ) গ্রহণের অধিকার সংরক্ষণ করে।
+              ধারা ৩ অনুযায়ী, ২০ তারিখের মধ্যে চাঁদা জমা দিতে ব্যর্থ হলে কমিটি সার্বিক পরিস্থিতি বিবেচনা করে যে কোনো সিদ্ধান্ত (জরিমানা বা পরবর্তী তারিখ) গ্রহণের অধিকার সংরক্ষণ করে।
             </p>
           </div>
 

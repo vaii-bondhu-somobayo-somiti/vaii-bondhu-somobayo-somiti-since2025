@@ -1501,7 +1501,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     type="text"
                     value={newRuleForm.highlight || ''}
                     onChange={(e) => setNewRuleForm({ ...newRuleForm, highlight: e.target.value })}
-                    placeholder="যেমন: প্রতি মাসের ১৫ তারিখের মধ্যে জমা বাধ্যতামূলক"
+                    placeholder="যেমন: প্রতি মাসের ২০ তারিখের মধ্যে জমা বাধ্যতামূলক"
                     className="w-full p-2.5 rounded-xl border border-stone-300 bg-white"
                   />
                 </div>
@@ -2918,7 +2918,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   type="text"
                   value={noticeTitle}
                   onChange={(e) => setNoticeTitle(e.target.value)}
-                  placeholder="যেমন: সেপ্টেম্বর মাসের চাঁদা জমার শেষ তারিখ ১৫ তারিখ"
+                  placeholder="যেমন: সেপ্টেম্বর মাসের চাঁদা জমার শেষ তারিখ ২০ তারিখ"
                   className="w-full p-2.5 rounded-xl border border-stone-300 bg-white"
                   required
                 />

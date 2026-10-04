@@ -110,7 +110,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavClick, onOpenDocsModal }) =
               </div>
               <div className="bg-stone-900/80 p-2.5 rounded-lg border border-stone-800">
                 <span className="font-semibold text-emerald-400 block">জমার সময়সীমা:</span>
-                প্রতি মাসের ১৫ তারিখের মধ্যে
+                প্রতি মাসের ২০ তারিখের মধ্যে
               </div>
               <div className="bg-stone-900/80 p-2.5 rounded-lg border border-stone-800">
                 <span className="font-semibold text-emerald-400 block">ডাউন পেমেন্ট:</span>

@@ -8,9 +8,21 @@ import {
   onSnapshot, 
   getDocFromServer 
 } from 'firebase/firestore';
-import firebaseConfig from '../firebase-applet-config.json';
+import rawConfig from '../firebase-applet-config.json';
 import { SocietyData } from './types';
 import { INITIAL_SOCIETY_DATA } from './data/initialData';
+
+// Securely load Firebase configuration using Vite's import.meta.env
+// Secrets and keys are kept in .env and ignored by Git
+const firebaseConfig = {
+  apiKey: (import.meta.env.VITE_FIREBASE_API_KEY as string) || rawConfig.apiKey || 'YOUR_GOOGLE_API_KEY',
+  authDomain: (import.meta.env.VITE_FIREBASE_AUTH_DOMAIN as string) || rawConfig.authDomain,
+  projectId: (import.meta.env.VITE_FIREBASE_PROJECT_ID as string) || rawConfig.projectId,
+  storageBucket: (import.meta.env.VITE_FIREBASE_STORAGE_BUCKET as string) || rawConfig.storageBucket,
+  messagingSenderId: (import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID as string) || rawConfig.messagingSenderId,
+  appId: (import.meta.env.VITE_FIREBASE_APP_ID as string) || rawConfig.appId,
+  firestoreDatabaseId: (import.meta.env.VITE_FIREBASE_DATABASE_ID as string) || rawConfig.firestoreDatabaseId || 'ai-studio-a9d1724b-2b75-49ba-9939-b9ec96e31f54'
+};
 
 // 1. Initialize Firebase App & Firestore Database instance
 const app = initializeApp(firebaseConfig);

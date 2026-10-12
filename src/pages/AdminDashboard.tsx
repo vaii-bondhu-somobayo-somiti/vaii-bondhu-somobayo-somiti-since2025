@@ -19,6 +19,7 @@ import {
 import { saveSocietyCloudData, fetchSocietyCloudData } from '../firebase';
 import { compressAndReadFile } from '../utils/imageHelper';
 import { SOCIETY_RULES, COMMITTEE_MEMBERS } from '../data/initialData';
+import { AdminPaymentApprovals } from '../components/AdminPaymentApprovals';
 import { 
   ShieldCheck, 
   Landmark, 
@@ -62,7 +63,7 @@ interface AdminDashboardProps {
   onNavigate?: (tab: string) => void;
 }
 
-type TabType = 'bank' | 'rules' | 'society' | 'committee' | 'balance' | 'members' | 'expenses' | 'notices' | 'backup';
+type TabType = 'payments' | 'bank' | 'rules' | 'society' | 'committee' | 'balance' | 'members' | 'expenses' | 'notices' | 'backup';
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   data,
@@ -70,7 +71,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onLogout,
   onNavigate
 }) => {
-  const [activeTab, setActiveTab] = useState<TabType>('bank');
+  const pendingSubmissionsCount = (data.paymentSubmissions || []).filter(s => s.status === 'pending').length;
+  const [activeTab, setActiveTab] = useState<TabType>(() => {
+    return pendingSubmissionsCount > 0 ? 'payments' : 'bank';
+  });
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -881,9 +885,51 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       )}
 
+      {/* Pending Payments Alert Banner */}
+      {pendingSubmissionsCount > 0 && activeTab !== 'payments' && (
+        <div 
+          onClick={() => setActiveTab('payments')}
+          className="bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-stone-950 p-3.5 sm:p-4 rounded-2xl shadow-lg flex items-center justify-between gap-3 cursor-pointer hover:brightness-105 transition-all border-2 border-amber-300 font-bold text-xs sm:text-sm animate-pulse"
+        >
+          <div className="flex items-center gap-2.5">
+            <span className="p-1.5 bg-stone-950 text-amber-300 rounded-xl">
+              <Clock className="w-5 h-5" />
+            </span>
+            <span>
+              🔔 <strong>{toBengaliNumber(pendingSubmissionsCount)}টি নতুন পেমেন্ট আবেদন</strong> অনুমোদনের অপেক্ষায় আছে!
+            </span>
+          </div>
+          <span className="bg-stone-950 text-white px-3.5 py-1.5 rounded-xl text-xs font-black shadow-xs whitespace-nowrap">
+            যাচাই ও অনুমোদন করুন ➔
+          </span>
+        </div>
+      )}
+
       {/* Modern Scrolling Tabs */}
       <div className="flex border-b border-stone-200 overflow-x-auto gap-1 pb-1">
         
+        {/* TAB: PAYMENT APPROVALS */}
+        <button
+          onClick={() => setActiveTab('payments')}
+          className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1.5 transition-all whitespace-nowrap cursor-pointer relative ${
+            activeTab === 'payments'
+              ? 'bg-emerald-900 text-white shadow-md'
+              : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
+          }`}
+        >
+          <Clock className={`w-4 h-4 ${pendingSubmissionsCount > 0 ? 'text-amber-400' : 'text-amber-300'}`} />
+          <span>পেমেন্ট অনুমোদন</span>
+          {pendingSubmissionsCount > 0 ? (
+            <span className="ml-1 bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-xs">
+              {toBengaliNumber(pendingSubmissionsCount)}টি নতুন
+            </span>
+          ) : (
+            <span className="ml-1 bg-stone-200 text-stone-700 text-[10px] px-1.5 py-0.2 rounded-full font-mono">
+              {toBengaliNumber((data.paymentSubmissions || []).length)}
+            </span>
+          )}
+        </button>
+
         <button
           onClick={() => setActiveTab('bank')}
           className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1.5 transition-all whitespace-nowrap cursor-pointer ${
@@ -984,6 +1030,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </button>
 
       </div>
+
+      {/* ======================================================== */}
+      {/* TAB 0: PAYMENT APPROVALS (PENDING & APPROVED VERIFICATION) */}
+      {/* ======================================================== */}
+      {activeTab === 'payments' && (
+        <AdminPaymentApprovals
+          data={data}
+          onDataUpdated={onDataUpdated}
+          showNotification={showNotification}
+        />
+      )}
 
       {/* ======================================================== */}
       {/* TAB 1: BANK & MOBILE BANKING (USER EXPLICITLY REQUESTED) */}

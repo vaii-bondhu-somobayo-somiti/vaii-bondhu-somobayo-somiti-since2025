@@ -27,7 +27,7 @@ export const PaymentPage: React.FC<PaymentPageProps> = ({ data, onPaymentSubmitt
 
   // Form states
   const [selectedMemberId, setSelectedMemberId] = useState(data.members[0]?.id || '');
-  const [month, setMonth] = useState('সেপ্টেম্বর ২০২৫');
+  const [month, setMonth] = useState('জানুয়ারি ২০২৬');
   const [paymentType, setPaymentType] = useState<'monthly' | 'downpayment' | 'fine'>('monthly');
   const [amount, setAmount] = useState<number>(2500);
   const [method, setMethod] = useState<'bkash' | 'nagad' | 'bank' | 'cash'>('bkash');
@@ -71,62 +71,15 @@ export const PaymentPage: React.FC<PaymentPageProps> = ({ data, onPaymentSubmitt
       trxId: trxId.trim() || `CASH-${Date.now().toString().slice(-6)}`,
       senderPhone: senderPhone.trim(),
       date: new Date().toLocaleDateString('bn-BD'),
-      status: 'approved', // Auto-approved in cooperative record
+      status: 'pending', // Pending verification and approval by Admin
+      appliedAt: new Date().toISOString(),
       note: note.trim()
     };
 
-    // Update member's record in state
-    const updatedMembers = data.members.map((m) => {
-      if (m.id === selectedMemberId) {
-        const amt = Number(amount);
-        if (month.includes('২০২৬')) {
-          const map2026: Record<string, string> = {
-            'জানুয়ারি': '01', 'ফেব্রুয়ারি': '02', 'মার্চ': '03', 'এপ্রিল': '04',
-            'মে': '05', 'জুন': '06', 'জুলাই': '07', 'আগস্ট': '08',
-            'সেপ্টেম্বর': '09', 'অক্টোবর': '10', 'নভেম্বর': '11', 'ডিসেম্বর': '12'
-          };
-          let k = '09';
-          for (const [name, key] of Object.entries(map2026)) {
-            if (month.includes(name)) { k = key; break; }
-          }
-          return {
-            ...m,
-            payments2026: {
-              ...(m.payments2026 || {}),
-              [k]: amt
-            }
-          };
-        } else if (month.includes('সেপ্টেম্বর')) {
-          return { 
-            ...m, 
-            september: amt,
-            payments2025: { ...(m.payments2025 || {}), '09': amt }
-          };
-        } else if (month.includes('আগস্ট')) {
-          return { 
-            ...m, 
-            august: amt,
-            payments2025: { ...(m.payments2025 || {}), '08': amt }
-          };
-        } else if (month.includes('অক্টোবর')) {
-          return { 
-            ...m, 
-            october: amt,
-            payments2025: { ...(m.payments2025 || {}), '10': amt }
-          };
-        } else if (paymentType === 'downpayment') {
-          return { ...m, downPayment: (m.downPayment || 0) + amt };
-        } else if (paymentType === 'fine') {
-          return { ...m, fine: (m.fine || 0) + amt };
-        }
-      }
-      return m;
-    });
-
+    // Note: Member's balance and ledger are NOT credited immediately.
+    // The money will ONLY reflect on the website once the Admin reviews and approves it in the Admin Dashboard!
     const updatedData: SocietyData = {
       ...data,
-      members: updatedMembers,
-      currentBankBalance: data.currentBankBalance + Number(amount),
       paymentSubmissions: [newSubmission, ...(data.paymentSubmissions || [])]
     };
 
@@ -289,25 +242,25 @@ export const PaymentPage: React.FC<PaymentPageProps> = ({ data, onPaymentSubmitt
               <h2 className="text-2xl font-extrabold text-stone-900">
                 "পেমেন্ট করেছি" ফরম
               </h2>
-              <p className="text-xs text-stone-500 mt-0.5">
-                টাকা পাঠিয়ে নিচের তথ্যগুলো দিয়ে সাবমিট করুন, সাথে সাথে সিস্টেমে হালনাগাদ হবে।
+              <p className="text-xs text-stone-600 mt-0.5 leading-relaxed">
+                টাকা পাঠিয়ে নিচের তথ্যগুলো দিয়ে আবেদন করুন। অ্যাডমিন প্যানেলে যাচাই করে অনুমোদন (Approve) করলেই ওয়েবসাইটে আপনার খাতা ও হিসাবে টাকা যুক্ত হবে।
               </p>
             </div>
 
             {successMsg && (
-              <div className="bg-emerald-50 border-2 border-emerald-500 p-4 rounded-2xl text-emerald-950 flex items-start justify-between gap-3 animate-in fade-in">
+              <div className="bg-amber-50 border-2 border-amber-500 p-4 rounded-2xl text-amber-950 flex items-start justify-between gap-3 animate-in fade-in shadow-sm">
                 <div className="flex items-start gap-2.5">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-700 shrink-0 mt-0.5" />
+                  <Clock className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
                   <div>
-                    <strong className="block font-bold text-sm">পেমেন্ট সফলভাবে রেজিস্ট্রি হয়েছে!</strong>
-                    <p className="text-xs text-emerald-800 mt-0.5">
-                      ধন্যবাদ! আপনার জমার তথ্য স্থানীয় লেজার ও ব্যাংক হিসাবে যুক্ত করা হয়েছে।
+                    <strong className="block font-bold text-sm">পেমেন্টের আবেদন সফলভাবে জমা হয়েছে!</strong>
+                    <p className="text-xs text-amber-900 mt-1 leading-relaxed">
+                      ধন্যবাদ! আপনার জমার আবেদনটি সমিতির অ্যাডমিন প্যানেলে জমা হয়েছে। অ্যাডমিন TrxID যাচাই করে অনুমোদন করলেই ওয়েবসাইটে ও সদস্য তালিকায় আপনার জমা টাকা প্রদর্শিত হবে।
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={() => setSuccessMsg(false)}
-                  className="text-emerald-700 text-xs font-bold hover:underline"
+                  className="text-amber-800 text-xs font-bold hover:underline cursor-pointer"
                 >
                   ঠিক আছে
                 </button>
@@ -346,10 +299,29 @@ export const PaymentPage: React.FC<PaymentPageProps> = ({ data, onPaymentSubmitt
                     onChange={(e) => setMonth(e.target.value)}
                     className="w-full p-2.5 rounded-xl border border-stone-300 focus:border-emerald-600 bg-white"
                   >
-                    <option value="সেপ্টেম্বর ২০২৫">সেপ্টেম্বর ২০২৫</option>
-                    <option value="আগস্ট ২০২৫">আগস্ট ২০২৫</option>
-                    <option value="অক্টোবর ২০২৫">অক্টোবর ২০২৫</option>
-                    <option value="ডাউন পেমেন্ট ২০২৫">৬ মাসের ডাউন পেমেন্ট</option>
+                    <optgroup label="২০২৬ সাল">
+                      <option value="জানুয়ারি ২০২৬">জানুয়ারি ২০২৬</option>
+                      <option value="ফেব্রুয়ারি ২০২৬">ফেব্রুয়ারি ২০২৬</option>
+                      <option value="মার্চ ২০২৬">মার্চ ২০২৬</option>
+                      <option value="এপ্রিল ২০২৬">এপ্রিল ২০২৬</option>
+                      <option value="মে ২০২৬">মে ২০২৬</option>
+                      <option value="জুন ২০২৬">জুন ২০২৬</option>
+                      <option value="জুলাই ২০২৬">জুলাই ২০২৬</option>
+                      <option value="আগস্ট ২০২৬">আগস্ট ২০২৬</option>
+                      <option value="সেপ্টেম্বর ২০২৬">সেপ্টেম্বর ২০২৬</option>
+                      <option value="অক্টোবর ২০২৬">অক্টোবর ২০২৬</option>
+                      <option value="নভেম্বর ২০২৬">নভেম্বর ২০২৬</option>
+                      <option value="ডিসেম্বর ২০২৬">ডিসেম্বর ২০২৬</option>
+                      <option value="১ম ৬ মাস ডাউন পেমেন্ট ২০২৬">১ম ৬ মাস ডাউন পেমেন্ট ২০২৬</option>
+                      <option value="২য় ৬ মাস ডাউন পেমেন্ট ২০২৬">২য় ৬ মাস ডাউন পেমেন্ট ২০২৬</option>
+                    </optgroup>
+                    <optgroup label="২০২৫ সাল">
+                      <option value="আগস্ট ২০২৫">আগস্ট ২০২৫</option>
+                      <option value="সেপ্টেম্বর ২০২৫">সেপ্টেম্বর ২০২৫</option>
+                      <option value="অক্টোবর ২০২৫">অক্টোবর ২০২৫</option>
+                      <option value="১ম ৬ মাস ডাউন পেমেন্ট ২০২৫">১ম ৬ মাস ডাউন পেমেন্ট ২০২৫</option>
+                      <option value="২য় ৬ মাস ডাউন পেমেন্ট ২০২৫">২য় ৬ মাস ডাউন পেমেন্ট ২০২৫</option>
+                    </optgroup>
                   </select>
                 </div>
 
@@ -482,14 +454,15 @@ export const PaymentPage: React.FC<PaymentPageProps> = ({ data, onPaymentSubmitt
 
             {/* Printable Receipt Card if submitted */}
             {submittedReceipt && (
-              <div className="mt-6 p-5 bg-stone-50 border-2 border-emerald-600 rounded-2xl space-y-3 print:border-black">
+              <div className="mt-6 p-5 bg-stone-50 border-2 border-amber-500 rounded-2xl space-y-3 print:border-black animate-in fade-in">
                 <div className="flex items-center justify-between border-b border-stone-200 pb-2">
                   <div>
                     <h4 className="font-bold text-emerald-950 text-sm">ভাই-বন্ধু সমবায় সমিতি</h4>
-                    <span className="text-[10px] text-stone-500">অনলাইন পেমেন্ট জমা স্বীকৃতিপত্র</span>
+                    <span className="text-[10px] text-stone-500">অনলাইন পেমেন্ট আবেদন ভাউচার</span>
                   </div>
-                  <span className="bg-emerald-100 text-emerald-900 text-xs font-bold px-2 py-0.5 rounded">
-                    স্বীকৃত (Approved)
+                  <span className="bg-amber-100 text-amber-900 border border-amber-300 text-xs font-black px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                    <Clock className="w-3 h-3 text-amber-700" />
+                    <span>যাচাইয়ের জন্য অপেক্ষমান (Pending)</span>
                   </span>
                 </div>
 
@@ -502,12 +475,16 @@ export const PaymentPage: React.FC<PaymentPageProps> = ({ data, onPaymentSubmitt
                   <div>TrxID: <strong className="font-mono">{submittedReceipt.trxId}</strong></div>
                 </div>
 
+                <div className="bg-amber-50/80 p-2.5 rounded-xl border border-amber-200 text-[11px] text-amber-900">
+                  ℹ️ <strong>জরুরি তথ্য:</strong> আপনার আবেদনটি সমিতির অ্যাডমিন প্যানেলে পাঠানো হয়েছে। অ্যাডমিন TrxID ভেরিফাই করে অনুমোদন করলেই ওয়েবসাইটে সদস্য তালিকায় আপনার টাকা জমা দেখাবে।
+                </div>
+
                 <div className="pt-2 flex justify-end">
                   <button
                     onClick={() => window.print()}
-                    className="text-xs text-emerald-800 hover:underline font-bold flex items-center gap-1"
+                    className="text-xs text-emerald-800 hover:underline font-bold flex items-center gap-1 cursor-pointer"
                   >
-                    <FileText className="w-3.5 h-3.5" /> রসিদ প্রিন্ট করুন
+                    <FileText className="w-3.5 h-3.5" /> ভাউচার প্রিন্ট করুন
                   </button>
                 </div>
               </div>
@@ -516,6 +493,110 @@ export const PaymentPage: React.FC<PaymentPageProps> = ({ data, onPaymentSubmitt
           </div>
         </div>
 
+      </div>
+
+      {/* ======================================================== */}
+      {/* SECTION: LIVE PAYMENT SUBMISSIONS & STATUS TRACKING */}
+      {/* ======================================================== */}
+      <div className="bg-white rounded-3xl p-6 sm:p-8 border-2 border-stone-200 shadow-md space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-stone-200 pb-4">
+          <div>
+            <div className="inline-flex items-center gap-1.5 text-xs font-black text-emerald-800 uppercase tracking-wider mb-1">
+              <Clock className="w-4 h-4 text-emerald-600" /> আবেদন ট্র্যাকিং
+            </div>
+            <h3 className="text-xl sm:text-2xl font-black text-stone-900">
+              পেমেন্ট আবেদন ও অনুমোদনের লাইভ অবস্থা
+            </h3>
+            <p className="text-xs text-stone-500 mt-0.5">
+              আপনার জমা দেওয়া পেমেন্ট অ্যাডমিন অনুমোদন করেছে কিনা এখান থেকে সরাসরি দেখে নিন।
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-stone-600 bg-stone-100 px-3 py-1.5 rounded-xl border border-stone-200">
+              মোট আবেদন: <strong>{toBengaliNumber((data.paymentSubmissions || []).length)}</strong> টি
+            </span>
+          </div>
+        </div>
+
+        {/* Submissions List */}
+        {(!data.paymentSubmissions || data.paymentSubmissions.length === 0) ? (
+          <div className="text-center py-8 text-stone-500 text-xs">
+            এখনও কোনো পেমেন্ট আবেদন জমা পড়েনি। উপরে ফর্ম পূরণ করে আবেদন করুন।
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {data.paymentSubmissions.slice(0, 10).map((sub) => {
+              const isPending = sub.status === 'pending';
+              const isApproved = sub.status === 'approved';
+              const isRejected = sub.status === 'rejected';
+
+              return (
+                <div
+                  key={sub.id}
+                  className={`p-4 rounded-2xl border-2 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                    isPending
+                      ? 'bg-amber-50/40 border-amber-300'
+                      : isApproved
+                      ? 'bg-emerald-50/30 border-emerald-200'
+                      : 'bg-stone-50 border-stone-200 opacity-80'
+                  }`}
+                >
+                  <div className="space-y-1 text-xs">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <strong className="text-sm font-bold text-stone-900">{sub.memberName}</strong>
+                      <span className="font-mono text-stone-500">[{sub.memberId}]</span>
+                      <span className="text-stone-400">•</span>
+                      <span className="font-semibold text-stone-700">{sub.month}</span>
+                      <span className="text-stone-400">•</span>
+                      <span className="font-mono text-[11px] text-stone-500">{sub.date}</span>
+                    </div>
+
+                    <div className="flex items-center gap-3 text-[11px] text-stone-600 flex-wrap">
+                      <span>মাধ্যম: <strong className="uppercase">{sub.method}</strong></span>
+                      <span>TrxID: <strong className="font-mono text-stone-800">{sub.trxId}</strong></span>
+                      {sub.senderPhone && <span>প্রেরক: <strong className="font-mono">{sub.senderPhone}</strong></span>}
+                    </div>
+
+                    {isRejected && sub.rejectionReason && (
+                      <p className="text-[11px] text-red-700 font-medium">
+                        বাতিলের কারণ: {sub.rejectionReason}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2 shrink-0">
+                    <span className="text-base font-black text-emerald-950 font-mono">
+                      {formatCurrency(sub.amount)}
+                    </span>
+
+                    {/* Status Badge */}
+                    {isPending && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-black bg-amber-100 text-amber-900 border border-amber-300">
+                        <Clock className="w-3 h-3 text-amber-700" />
+                        <span>⏳ অপেক্ষমান (অ্যাডমিন যাচাই করছেন)</span>
+                      </span>
+                    )}
+
+                    {isApproved && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-900 border border-emerald-300">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-700" />
+                        <span>✅ অনুমোদিত (টাকা ওয়েবসাইটে যুক্ত)</span>
+                      </span>
+                    )}
+
+                    {isRejected && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-black bg-red-100 text-red-900 border border-red-300">
+                        <AlertCircle className="w-3 h-3 text-red-700" />
+                        <span>❌ বাতিল করা হয়েছে</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
     </div>

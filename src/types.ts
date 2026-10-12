@@ -44,6 +44,11 @@ export interface PaymentSubmission {
   date: string;
   status: 'approved' | 'pending' | 'rejected';
   note?: string;
+  appliedAt?: string;
+  approvedAt?: string;
+  approvedBy?: string;
+  rejectionReason?: string;
+  rejectedAt?: string;
 }
 
 export interface CommitteeMember {

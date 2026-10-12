@@ -21,7 +21,9 @@ import {
   Camera,
   Trash2,
   Upload,
-  User
+  User,
+  Clock,
+  AlertCircle
 } from 'lucide-react';
 import { Logo } from '../components/Logo';
 
@@ -348,6 +350,102 @@ export const MemberDashboard: React.FC<MemberDashboardProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Member's Personal Payment Applications & Approval Status */}
+      {(() => {
+        const memberSubmissions = (data.paymentSubmissions || []).filter(
+          s => s.memberId === member.id || s.memberId === String(member.rollNo)
+        );
+        if (memberSubmissions.length === 0) return null;
+
+        const pendingList = memberSubmissions.filter(s => s.status === 'pending');
+
+        return (
+          <div className="bg-white rounded-3xl border-2 border-stone-200 p-6 shadow-md space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-stone-200 pb-3">
+              <div className="flex items-center gap-2">
+                <Clock className="w-5 h-5 text-amber-600" />
+                <h3 className="font-extrabold text-stone-900 text-base">
+                  আপনার পেমেন্ট আবেদন ও অনুমোদনের অবস্থা
+                </h3>
+              </div>
+              <button
+                onClick={() => onNavigate('payment')}
+                className="text-xs font-bold text-emerald-800 hover:text-emerald-950 flex items-center gap-1 cursor-pointer"
+              >
+                <span>নতুন পেমেন্ট আবেদন করুন</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {pendingList.length > 0 && (
+              <div className="bg-amber-50 border border-amber-300 p-3.5 rounded-2xl text-xs text-amber-950 flex items-start gap-2.5">
+                <Clock className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                <div>
+                  <strong>অপেক্ষমান নোটিশ:</strong> আপনার {toBengaliNumber(pendingList.length)}টি পেমেন্ট আবেদন অ্যাডমিন প্যানেলে যাচাইয়ের অপেক্ষায় রয়েছে। অ্যাডমিন অনুমোদন (Approve) করলেই আপনার নিচের খাতা ও চার্টে টাকা স্বয়ংক্রিয়ভাবে যোগ হবে।
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              {memberSubmissions.slice(0, 5).map(sub => (
+                <div
+                  key={sub.id}
+                  className={`p-3.5 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs ${
+                    sub.status === 'pending'
+                      ? 'bg-amber-50/60 border-amber-300'
+                      : sub.status === 'approved'
+                      ? 'bg-emerald-50/60 border-emerald-300'
+                      : 'bg-red-50/40 border-red-200'
+                  }`}
+                >
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <strong className="text-stone-900">{sub.month}</strong>
+                      <span className="text-stone-400">•</span>
+                      <span className="uppercase text-[11px] font-bold text-stone-600">{sub.method}</span>
+                      <span className="text-stone-400">•</span>
+                      <span className="font-mono text-[11px] text-stone-500">{sub.date}</span>
+                    </div>
+                    <div className="text-[11px] text-stone-600">
+                      TrxID: <span className="font-mono font-bold text-stone-800">{sub.trxId}</span>
+                    </div>
+                    {sub.status === 'rejected' && sub.rejectionReason && (
+                      <p className="text-[11px] text-red-700 font-semibold">
+                        বাতিলের কারণ: {sub.rejectionReason}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-1">
+                    <strong className="text-emerald-950 font-mono text-sm">
+                      {formatCurrency(sub.amount)}
+                    </strong>
+                    {sub.status === 'pending' && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
+                        <Clock className="w-2.5 h-2.5 text-amber-700" />
+                        অপেক্ষমান
+                      </span>
+                    )}
+                    {sub.status === 'approved' && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300">
+                        <CheckCircle2 className="w-2.5 h-2.5 text-emerald-700" />
+                        অনুমোদিত ও যুক্ত
+                      </span>
+                    )}
+                    {sub.status === 'rejected' && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-red-100 text-red-900 border border-red-300">
+                        <AlertCircle className="w-2.5 h-2.5 text-red-700" />
+                        বাতিলকৃত
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Official Money Receipt Print Voucher */}
       <div className="bg-white rounded-3xl border-2 border-stone-300 p-6 sm:p-8 shadow-xl space-y-6 print:border-black">
